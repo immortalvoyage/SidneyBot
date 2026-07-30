@@ -6,7 +6,7 @@
   "vars": {
     "APP_VERSION": "4.2.3",
     "SECT_NAME": "☯【仙遊者】☯",
-    "SECT_MASTER_ID": "1179245490081103994",
+    "SECT_MASTER_ID": "請填入宗主 Discord User ID",
     "GEMINI_MODEL": "gemini-2.5-flash",
     "GEMINI_FALLBACK_MODELS": "gemini-2.5-flash-lite,gemini-2.0-flash",
     "GEMINI_MAX_OUTPUT_TOKENS": "1600",
@@ -16,7 +16,7 @@
   "kv_namespaces": [
     {
       "binding": "BOT_MEMORY",
-      "id": "cf0fce4929484ce689b8c9af9abe4aaf"
+      "id": "請填入 KV namespace ID"
     }
   ]
 }

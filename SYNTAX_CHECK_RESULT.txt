@@ -1,0 +1,27 @@
+✅ commands.js
+✅ config.js
+✅ discord.js
+✅ gemini.js
+✅ logger.js
+✅ memory.js
+✅ register-commands.js
+✅ scripts/check-syntax.js
+✅ src/commands/apply.js
+✅ src/commands/approve.js
+✅ src/commands/forget.js
+✅ src/commands/members.js
+✅ src/commands/profile.js
+✅ src/commands/reject.js
+✅ src/commands/sect.js
+✅ src/prompts/laozu.js
+✅ src/sect/applications.js
+✅ src/sect/audit.js
+✅ src/sect/constants.js
+✅ src/sect/members.js
+✅ src/sect/permissions.js
+✅ src/sect/service.js
+✅ src/sect/storage.js
+✅ utils.js
+✅ worker.js
+
+全部 25 個 JavaScript 檔案語法檢查通過。

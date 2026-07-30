@@ -1,18 +1,16 @@
 {
   "name": "xianyouzhe-discord-ai-bot",
-  "version": "3.0.0",
-  "description": "☯【仙遊者】☯ Discord AI Bot",
+  "version": "4.2.3",
   "private": true,
   "type": "module",
+  "description": "☯【仙遊者】☯ Discord AI Bot - Cloudflare Workers + Gemini + KV 宗門系統",
   "scripts": {
+    "check": "node scripts/check-syntax.js",
+    "register": "node register-commands.js",
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "register": "node register-commands.js"
-  },
-  "dependencies": {
-    "@discordjs/verify": "^2.0.0"
+    "dev": "wrangler dev"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.28.0"
   }
 }

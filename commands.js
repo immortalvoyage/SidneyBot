@@ -1,20 +1,22 @@
-/**
- * ☯【仙遊者】☯ AI 管家 v3
- *
- * /ai      公開
- * /help    公開
- * /profile 私密
- * /forget  私密
- */
-
-import { askGemini, GeminiApiError } from "./gemini.js";
+import { askGemini } from "./gemini.js";
 
 import {
   deferredResponse,
   immediateResponse,
-  sendLongReply,
-  logInteraction
+  sendLongReply
 } from "./discord.js";
+
+import {
+  loadMemory,
+  saveMemory,
+  loadProfile
+} from "./memory.js";
+
+import {
+  formatError,
+  getOptionValue,
+  getUser
+} from "./utils.js";
 
 import {
   logError,
@@ -22,445 +24,185 @@ import {
 } from "./logger.js";
 
 import {
-  formatError
-} from "./utils.js";
+  ensureMaster,
+  getMember
+} from "./src/sect/members.js";
 
 import {
-  loadMemory,
-  saveMemory,
-  loadProfile,
-  updateProfileFromMessage,
-  clearAllMemory,
-  formatProfile
-} from "./memory.js";
+  canUseAI
+} from "./src/sect/permissions.js";
 
-export function handleCommand(
+import { handleApply } from "./src/commands/apply.js";
+import { handleApprove } from "./src/commands/approve.js";
+import { handleReject } from "./src/commands/reject.js";
+import { handleMembers } from "./src/commands/members.js";
+import { handleSect } from "./src/commands/sect.js";
+import { handleProfile } from "./src/commands/profile.js";
+import { handleForget } from "./src/commands/forget.js";
+
+export async function handleCommand(
   interaction,
   env,
   ctx
 ) {
-  const command =
-    interaction.data?.name;
+  const command = interaction.data?.name;
 
-  switch (command) {
-    case "help":
-      return handleHelp();
+  try {
+    switch (command) {
+      case "ai":
+        return handleAsk(interaction, env, ctx);
 
-    case "ai":
-      return handleAsk(
-        interaction,
-        env,
-        ctx
-      );
+      case "apply":
+        return await handleApply(interaction, env);
 
-    case "profile":
-      return handleProfile(
-        interaction,
-        env,
-        ctx
-      );
+      case "approve":
+        return await handleApprove(interaction, env);
 
-    case "forget":
-      return handleForget(
-        interaction,
-        env,
-        ctx
-      );
+      case "reject":
+        return await handleReject(interaction, env);
 
-    default:
-      return immediateResponse(
-        "❌ 找不到此指令。",
-        true
-      );
+      case "members":
+        return await handleMembers(interaction, env);
+
+      case "sect":
+        return await handleSect(interaction, env);
+
+      case "profile":
+        return await handleProfile(interaction, env);
+
+      case "forget":
+        return await handleForget(interaction, env);
+
+      case "help":
+        return handleHelp(env);
+
+      default:
+        return immediateResponse(
+          "❌ 找不到此指令。",
+          true
+        );
+    }
+  } catch (error) {
+    logError(`指令 ${command} 執行失敗`, error);
+
+    return immediateResponse(
+      `❌ 指令執行失敗：${formatError(error)}`,
+      true
+    );
   }
 }
 
-function handleHelp() {
+function handleHelp(env) {
   return immediateResponse(
     [
-      "☯【仙遊者】☯ AI 管家 v3",
+      `## ${env.SECT_NAME || "☯【仙遊者】☯"} AI Bot`,
       "",
-      "可用指令：",
-      "• `/ai question:你的問題`－公開與老祖聊天",
-      "• `/profile`－私密查看 AI 記住的個人資料",
-      "• `/forget`－私密清除自己的所有記憶",
-      "• `/help`－公開查看使用說明",
+      "`/ai question:<問題>`：宗門成員向仙遊靈提問",
+      "`/apply reason:<理由>`：申請入宗",
+      "`/sect`：查看宗門狀態與自己的身分",
+      "`/members`：查看宗門名冊",
+      "`/profile`：查看個人與宗門資料",
+      "`/forget`：清除自己的 AI 記憶",
+      "`/approve user_id:<ID>`：宗主／長老批准申請",
+      "`/reject user_id:<ID>`：宗主／長老拒絕申請",
       "",
-      "記憶範例：",
-      "• 我叫凜冬皓月",
-      "• 我的門派是青溪",
-      "• 我喜歡宋朝建築"
+      "請勿輸入密碼、Token、API Key 或其他機密資料。"
     ].join("\n"),
-    false
+    true
   );
 }
 
-function getIdentity(interaction) {
-  return {
-    userId:
-      interaction.member?.user?.id ||
-      interaction.user?.id,
+async function handleAsk(interaction, env, ctx) {
+  const question = String(
+    getOptionValue(interaction, "question") || ""
+  ).trim();
 
-    guildId:
-      interaction.guild_id ||
-      "direct-message",
-
-    username:
-      interaction.member?.user
-        ?.global_name ||
-      interaction.member?.user
-        ?.username ||
-      interaction.user?.global_name ||
-      interaction.user?.username ||
-      "未知使用者"
-  };
-}
-
-/**
- * /ai：立刻公開 Deferred，
- * 不在回傳前執行 Gemini 或 KV。
- */
-function handleAsk(
-  interaction,
-  env,
-  ctx
-) {
-  const question =
-    getOptionValue(
-      interaction,
-      "question"
-    );
-
-  if (
-    !question ||
-    String(question).trim() === ""
-  ) {
+  if (!question) {
     return immediateResponse(
       "❌ 請輸入問題。",
       true
     );
   }
 
-  const { username } =
-    getIdentity(interaction);
+  const user = getUser(interaction);
+  await ensureMaster(env, user);
 
-  logInteraction("ai", username);
+  const member = await getMember(env, user.id);
+
+  if (!member || !canUseAI(member.rank)) {
+    return immediateResponse(
+      [
+        "❌ 你目前沒有使用 AI 老祖的權限。",
+        "請先使用 `/apply` 申請加入宗門。"
+      ].join("\n"),
+      true
+    );
+  }
 
   ctx.waitUntil(
     processAsk(
       interaction,
-      String(question).trim(),
+      question,
+      member,
       env
     )
   );
 
-  /**
-   * false = 公開回覆
-   */
   return deferredResponse(false);
 }
 
 async function processAsk(
   interaction,
   question,
+  member,
   env
 ) {
-  const {
-    userId,
-    guildId
-  } = getIdentity(interaction);
+  const guildId = interaction.guild_id || "dm";
+  const userId = member.userId;
 
   try {
-    if (!userId) {
-      throw new Error(
-        "無法取得 Discord 使用者 ID"
-      );
-    }
+    logInfo("開始詢問 Gemini", {
+      userId,
+      rank: member.rank
+    });
 
-    logInfo("讀取 AI 記憶");
+    const [history, profile] = await Promise.all([
+      loadMemory(env, guildId, userId),
+      loadProfile(env, guildId, userId)
+    ]);
 
-    const history =
-      await loadMemory(
-        env,
-        guildId,
-        userId
-      );
-
-    const profile =
-      await updateProfileFromMessage(
-        env,
-        guildId,
-        userId,
-        question
-      );
-
-    logInfo("開始詢問 Google Gemini");
-
-    const answer =
-      await askGemini(
-        question,
-        env,
-        history,
-        profile
-      );
-
-    /**
-     * 優先回覆 Discord，避免讓 KV 寫入
-     * 延遲使用者看到答案。
-     */
-const publicMessage = [
-  "### ☯ 小輩提問",
-  String(question)
-    .split("\n")
-    .map(line => `> ${line}`)
-    .join("\n"),
-  "",
-  "### ☯ 老祖回答",
-  answer
-].join("\n");
-
-await sendLongReply(
-  interaction.application_id,
-  interaction.token,
-  publicMessage,
-  false
-);
-
-    logInfo("Discord 回覆完成");
-
-    /**
-     * 回覆成功後才保存對話。
-     */
-    try {
-      await saveMemory(
-        env,
-        guildId,
-        userId,
-        question,
-        answer
-      );
-
-      logInfo("KV 記憶儲存完成");
-    } catch (memoryError) {
-      logError(
-        "KV 記憶儲存失敗",
-        memoryError
-      );
-    }
-  } catch (error) {
-    logError(
-      "Gemini 指令執行失敗",
-      error
+    const answer = await askGemini(
+      question,
+      env,
+      history,
+      profile,
+      member
     );
 
-    try {
-      const errorMessage = buildGeminiErrorMessage(error);
-
-      await sendLongReply(
-        interaction.application_id,
-        interaction.token,
-        errorMessage,
-        false
-      );
-    } catch (replyError) {
-      logError(
-        "Discord 錯誤訊息也無法送出",
-        replyError
-      );
-    }
-  }
-}
-
-function buildGeminiErrorMessage(error) {
-  const status =
-    error instanceof GeminiApiError
-      ? error.status
-      : 0;
-
-  const code =
-    error instanceof GeminiApiError
-      ? error.code
-      : "UNKNOWN";
-
-  if (status === 429) {
-    return [
-      "⚠️ 老祖今日接收的傳音過多，Gemini 額度或速率暫時受限。",
-      "",
-      "請稍候片刻再使用 `/ai`。",
-      "",
-      `錯誤代碼：${status} ${code}`
-    ].join("\n");
-  }
-
-  if ([500, 502, 503, 504].includes(status)) {
-    return [
-      "⚠️ 老祖目前有點忙碌，Google Gemini 服務暫時不穩定。",
-      "",
-      "程式已自動重試並切換備援模型，但仍未成功。",
-      "請稍候片刻後再次使用 `/ai`。",
-      "",
-      `錯誤代碼：${status || "未知"} ${code}`
-    ].join("\n");
-  }
-
-  if (status === 401 || status === 403) {
-    return [
-      "⚠️ Gemini API 金鑰或專案權限設定有誤。",
-      "",
-      "請檢查 Cloudflare Worker Secret：`GEMINI_API_KEY`。",
-      "",
-      `錯誤代碼：${status} ${code}`
-    ].join("\n");
-  }
-
-  if (status === 404) {
-    return [
-      "⚠️ 目前設定的 Gemini 模型不存在或已停止提供。",
-      "",
-      "請檢查 `config.js` 內的模型名稱。",
-      "",
-      `錯誤代碼：${status} ${code}`
-    ].join("\n");
-  }
-
-  return [
-    "⚠️ 老祖傳音時發生未預期錯誤。",
-    "",
-    "請查看 Cloudflare Workers Logs 取得詳細原因。",
-    "",
-    `錯誤代碼：${status || "未知"} ${code}`
-  ].join("\n");
-}
-
-/**
- * /profile：私密
- */
-function handleProfile(
-  interaction,
-  env,
-  ctx
-) {
-  const {
-    userId,
-    guildId,
-    username
-  } = getIdentity(interaction);
-
-  logInteraction("profile", username);
-
-  ctx.waitUntil(
-    processProfile(
-      interaction,
+    await saveMemory(
       env,
       guildId,
-      userId
-    )
-  );
-
-  return deferredResponse(true);
-}
-
-async function processProfile(
-  interaction,
-  env,
-  guildId,
-  userId
-) {
-  try {
-    const profile =
-      await loadProfile(
-        env,
-        guildId,
-        userId
-      );
+      userId,
+      question,
+      answer
+    );
 
     await sendLongReply(
       interaction.application_id,
       interaction.token,
-      formatProfile(profile),
-      true
+      answer
     );
+
+    logInfo("Gemini 回覆完成", { userId });
   } catch (error) {
-    await sendLongReply(
-      interaction.application_id,
-      interaction.token,
-      `❌ 讀取個人資料失敗：\n${formatError(error)}`,
-      true
-    );
-  }
-}
-
-/**
- * /forget：私密
- */
-function handleForget(
-  interaction,
-  env,
-  ctx
-) {
-  const {
-    userId,
-    guildId,
-    username
-  } = getIdentity(interaction);
-
-  logInteraction("forget", username);
-
-  ctx.waitUntil(
-    processForget(
-      interaction,
-      env,
-      guildId,
-      userId
-    )
-  );
-
-  return deferredResponse(true);
-}
-
-async function processForget(
-  interaction,
-  env,
-  guildId,
-  userId
-) {
-  try {
-    await clearAllMemory(
-      env,
-      guildId,
-      userId
-    );
+    logError("Gemini 指令執行失敗", error);
 
     await sendLongReply(
       interaction.application_id,
       interaction.token,
-      "✅ 已清除你的近期對話與長期個人資料記憶。",
-      true
-    );
-  } catch (error) {
-    await sendLongReply(
-      interaction.application_id,
-      interaction.token,
-      `❌ 清除記憶失敗：\n${formatError(error)}`,
-      true
+      `❌ Gemini API 發生錯誤：\n${formatError(error)}`
     );
   }
-}
-
-function getOptionValue(
-  interaction,
-  name
-) {
-  const options =
-    interaction.data?.options || [];
-
-  for (const option of options) {
-    if (option.name === name) {
-      return option.value;
-    }
-  }
-
-  return "";
 }
 
 export default {

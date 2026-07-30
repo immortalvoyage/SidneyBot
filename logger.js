@@ -1,79 +1,37 @@
-/**
- * ==========================================================
- * ☯【仙遊者】☯ Discord AI Bot
- * logger.js
- * ==========================================================
- */
-
-const PREFIX = "☯【仙遊者】☯";
-
-function getTimestamp() {
-
-  return new Date().toLocaleString(
-    "zh-TW",
-    {
-      timeZone: "Asia/Taipei",
-      hour12: false
-    }
-  );
-
-}
-
-function output(level, message, ...args) {
-
-  const text =
-    `[${getTimestamp()}] ${PREFIX} [${level}] ${message}`;
-
-  switch (level) {
-
-    case "ERROR":
-      console.error(text, ...args);
-      break;
-
-    case "WARN":
-      console.warn(text, ...args);
-      break;
-
-    case "DEBUG":
-      console.debug(text, ...args);
-      break;
-
-    default:
-      console.log(text, ...args);
-
+function serialize(value) {
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack
+    };
   }
-
+  return value;
 }
 
-export function logInfo(message, ...args) {
-
-  output("INFO", message, ...args);
-
+export function logInfo(message, data) {
+  console.log(JSON.stringify({
+    level: "INFO",
+    time: new Date().toISOString(),
+    message,
+    data: serialize(data)
+  }));
 }
 
-export function logWarn(message, ...args) {
-
-  output("WARN", message, ...args);
-
+export function logWarn(message, data) {
+  console.warn(JSON.stringify({
+    level: "WARN",
+    time: new Date().toISOString(),
+    message,
+    data: serialize(data)
+  }));
 }
 
-export function logError(message, ...args) {
-
-  output("ERROR", message, ...args);
-
+export function logError(message, error) {
+  console.error(JSON.stringify({
+    level: "ERROR",
+    time: new Date().toISOString(),
+    message,
+    error: serialize(error)
+  }));
 }
-
-export function logDebug(message, ...args) {
-
-  output("DEBUG", message, ...args);
-
-}
-
-export default {
-
-  logInfo,
-  logWarn,
-  logError,
-  logDebug
-
-};

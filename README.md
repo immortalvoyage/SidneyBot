@@ -1,98 +1,130 @@
-# SidneyBot
+# ☯【仙遊者】☯ Discord AI Bot V4.2.3
 
-☯【仙遊者】☯ Discord Gemini AI Bot
-
-## 專案簡介
-
-SidneyBot 是部署於 Cloudflare Workers 的 Discord AI 機器人，使用 Google Gemini API 產生回覆，並透過 Cloudflare KV 保存對話與使用者資料。
-
-AI 人格名稱：**老祖**
-
-## 主要功能
-
-- Discord Slash Commands
-- Google Gemini AI 回覆
-- Cloudflare KV 短期與長期記憶
-- 使用者 Profile
-- 忘記對話資料
-- 繁體中文回覆
-- Gemini 503 錯誤重試機制
-
-## 指令
-
-- `/ai`：公開向老祖提問
-- `/help`：公開顯示說明
-- `/profile`：私人查看個人資料
-- `/forget`：私人清除記憶
-
-## 技術架構
+完整獨立版，使用：
 
 - Cloudflare Workers
-- Discord Interactions API
-- Google Gemini REST API
+- Discord Interactions / Slash Commands
+- Google Gemini API
 - Cloudflare KV
-- JavaScript / Node.js
-- Wrangler
+- 宗門申請、審核、名冊、權限、Audit Log
+- 個人資料與多輪聊天記憶
 
-## 安裝
+## 已完成指令
 
-```powershell
+- `/ai question:<問題>`
+- `/apply reason:<理由>`
+- `/approve user_id:<Discord ID> note:<備註>`
+- `/reject user_id:<Discord ID> note:<備註>`
+- `/members`
+- `/sect`
+- `/profile`
+- `/forget`
+- `/help`
+
+## 宗門權限
+
+- 外人：可使用 `/apply`
+- 弟子：可使用 `/ai`、`/sect`、`/members`
+- 長老：包含弟子權限，可批准／拒絕申請
+- 宗主：完整權限；`SECT_MASTER_ID` 第一次互動時自動建立宗主名冊
+
+## 1. 安裝
+
+```bash
 npm install
 ```
 
-登入 Cloudflare：
+## 2. 建立 Wrangler 設定
 
-```powershell
-npx wrangler login
+複製：
+
+```bash
+cp wrangler.jsonc.example wrangler.jsonc
 ```
 
-## 設定秘密金鑰
+填入 KV namespace ID：
 
-請勿把 API Key 或 Token 寫入 GitHub。
+```bash
+npx wrangler kv namespace create BOT_MEMORY
+```
 
-```powershell
+將回傳的 ID 放入 `wrangler.jsonc`。
+
+## 3. 設定 Secrets
+
+```bash
+npx wrangler secret put DISCORD_PUBLIC_KEY
 npx wrangler secret put GEMINI_API_KEY
 ```
 
-其他秘密金鑰也應使用 Wrangler Secret 管理。
+`DISCORD_PUBLIC_KEY` 可在 Discord Developer Portal 的 General Information 找到。
 
-## 部署
+## 4. 設定宗主
 
-```powershell
-npx wrangler deploy
+在 `wrangler.jsonc` 的 `vars` 設定：
+
+```json
+{
+  "SECT_MASTER_ID": "你的 Discord User ID",
+  "SECT_NAME": "☯【仙遊者】☯"
+}
 ```
 
-## 註冊 Discord 指令
+## 5. 語法檢查
 
-```powershell
-node register-commands.js
+```bash
+npm run check
 ```
 
-## GitHub 更新流程
+## 6. 部署
 
-每次修改並存檔後：
+```bash
+npm run deploy
+```
 
-1. 在 GitHub Desktop 查看 **Changes**
-2. 在 **Summary** 填寫修改摘要
-3. 按 **Commit to main**
-4. 按 **Push origin**
+部署完成後，把 Worker URL 填入 Discord Developer Portal：
+
+`General Information → Interactions Endpoint URL`
+
+## 7. 註冊 Slash Commands
+
+Windows PowerShell：
+
+```powershell
+$env:DISCORD_APPLICATION_ID="你的 Application ID"
+$env:DISCORD_BOT_TOKEN="你的 Bot Token"
+$env:DISCORD_GUILD_ID="測試伺服器 Guild ID"
+npm run register
+```
+
+測試期間建議設定 `DISCORD_GUILD_ID`，指令通常會較快出現。
+
+要註冊為全域指令，移除 `DISCORD_GUILD_ID` 後再執行。
+
+## 8. 建議測試順序
+
+1. 宗主執行 `/sect`
+2. 一般帳號執行 `/ai`，應被拒絕
+3. 一般帳號執行 `/apply`
+4. 宗主執行 `/approve user_id:<申請者ID>`
+5. 申請者執行 `/ai`
+6. 執行 `/members`
+7. 執行 `/profile`
+8. 執行 `/forget`
+
+## KV Key 結構
+
+- `sect:member-index`
+- `sect:member:<userId>`
+- `sect:application-index`
+- `sect:application:<userId>`
+- `sect:audit-index`
+- `sect:audit:<auditId>`
+- `history:<guildId>:<userId>`
+- `profile:<guildId>:<userId>`
 
 ## 安全注意事項
 
-以下內容不可提交到 GitHub：
-
-- Gemini API Key
-- Discord Bot Token
-- Cloudflare API Token
-- `.env`
-- `.dev.vars`
-- `.wrangler`
-- `node_modules`
-
-`wrangler.jsonc` 可以提交，但不要直接放入秘密金鑰。
-
-## 專案位置
-
-```text
-D:\Sidney\AiBot\SidneyBot
-```
+- 不要把 Bot Token、Gemini API Key 或 Discord Public Key 寫進 Git。
+- `wrangler.jsonc` 可保存非機密 vars；機密一律使用 `wrangler secret put`。
+- `/approve` 與 `/reject` 使用 Discord User ID，避免 Discord User Option 在不同部署環境的解析差異。

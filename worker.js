@@ -1,353 +1,144 @@
-/**
- * ==========================================================
- * ☯【仙遊者】☯ Discord AI Bot
- * worker.js
- * Cloudflare Workers 原生 Ed25519 驗證版
- * ==========================================================
- */
-
 import { handleCommand } from "./commands.js";
+import { logError } from "./logger.js";
 
-import {
-  pingResponse,
-  immediateResponse
-} from "./discord.js";
+const PING = 1;
+const APPLICATION_COMMAND = 2;
 
-import {
-  logInfo,
-  logError
-} from "./logger.js";
-
-/**
- * Cloudflare Worker 主程式
- */
 export default {
-
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    if (request.method === "GET" && url.pathname === "/") {
+      return new Response(
+        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.2.3"} is running.`
+      );
+    }
+
+    if (request.method !== "POST") {
+      return new Response("Method Not Allowed", {
+        status: 405
+      });
+    }
+
+    const rawBody = await request.text();
+
+    const valid = await verifyDiscordRequest(
+      request,
+      rawBody,
+      env.DISCORD_PUBLIC_KEY
+    );
+
+    if (!valid) {
+      return new Response("Invalid request signature", {
+        status: 401
+      });
+    }
+
+    let interaction;
 
     try {
-
-      /**
-       * 健康檢查
-       */
-      if (request.method === "GET") {
-
-        return new Response(
-          "☯【仙遊者】☯ Discord AI Bot Online",
-          {
-            status: 200,
-            headers: {
-              "Content-Type":
-                "text/plain; charset=UTF-8"
-            }
-          }
-        );
-
-      }
-
-      /**
-       * 只接受 Discord POST 請求
-       */
-      if (request.method !== "POST") {
-
-        return new Response(
-          "Method Not Allowed",
-          {
-            status: 405,
-            headers: {
-              Allow: "GET, POST"
-            }
-          }
-        );
-
-      }
-
-      /**
-       * 讀取 Discord 驗證標頭
-       */
-      const signature =
-        request.headers.get(
-          "X-Signature-Ed25519"
-        );
-
-      const timestamp =
-        request.headers.get(
-          "X-Signature-Timestamp"
-        );
-
-      if (
-        !signature ||
-        !timestamp
-      ) {
-
-        logError(
-          "Discord 驗證標頭不存在"
-        );
-
-        return new Response(
-          "Missing Discord Signature",
-          {
-            status: 401
-          }
-        );
-
-      }
-
-      /**
-       * 保留原始 Request Body
-       *
-       * Discord 簽章驗證必須使用：
-       * timestamp + 原始 body
-       */
-      const rawBody =
-        await request.text();
-
-      /**
-       * 驗證 Discord Ed25519 簽章
-       */
-      const verified =
-        await verifyDiscordRequest(
-          rawBody,
-          signature,
-          timestamp,
-          env.DISCORD_PUBLIC_KEY
-        );
-
-      if (!verified) {
-
-        logError(
-          "Discord Ed25519 簽章驗證失敗"
-        );
-
-        return new Response(
-          "Invalid Request Signature",
-          {
-            status: 401
-          }
-        );
-
-      }
-
-      /**
-       * 解析 Discord Interaction
-       */
-      let interaction;
-
-      try {
-
-        interaction =
-          JSON.parse(rawBody);
-
-      } catch (error) {
-
-        logError(
-          "Discord JSON 解析失敗",
-          error
-        );
-
-        return new Response(
-          "Invalid JSON",
-          {
-            status: 400
-          }
-        );
-
-      }
-
-      logInfo(
-        `Interaction Type: ${interaction.type}`
-      );
-
-      /**
-       * Discord Interaction 類型
-       */
-      switch (interaction.type) {
-
-        /**
-         * Discord Endpoint 驗證 Ping
-         */
-        case 1:
-
-          return pingResponse();
-
-        /**
-         * Slash Command
-         */
-        case 2:
-
-          return await handleCommand(
-            interaction,
-            env,
-            ctx
-          );
-
-        /**
-         * 尚未支援的 Interaction
-         */
-        default:
-
-          return immediateResponse(
-            "目前尚未支援此 Interaction。"
-          );
-
-      }
-
-    } catch (error) {
-
-      logError(
-        "Worker 執行錯誤",
-        error
-      );
-
-      return new Response(
-        JSON.stringify({
-          error: true,
-          message:
-            "Internal Server Error"
-        }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type":
-              "application/json; charset=UTF-8"
-          }
-        }
-      );
-
+      interaction = JSON.parse(rawBody);
+    } catch {
+      return new Response("Invalid JSON", {
+        status: 400
+      });
     }
 
-  }
+    if (interaction.type === PING) {
+      return json({ type: 1 });
+    }
 
+    if (interaction.type !== APPLICATION_COMMAND) {
+      return json({
+        type: 4,
+        data: {
+          content: "目前只支援 Slash Commands。",
+          flags: 64
+        }
+      });
+    }
+
+    try {
+      return await handleCommand(
+        interaction,
+        env,
+        ctx
+      );
+    } catch (error) {
+      logError("未捕捉的 Interaction 錯誤", error);
+
+      return json({
+        type: 4,
+        data: {
+          content: "❌ 系統發生未預期錯誤。",
+          flags: 64
+        }
+      });
+    }
+  }
 };
 
-/**
- * ==========================================================
- * 驗證 Discord Ed25519 簽章
- * ==========================================================
- *
- * @param {string} body
- * @param {string} signatureHex
- * @param {string} timestamp
- * @param {string} publicKeyHex
- * @returns {Promise<boolean>}
- */
-async function verifyDiscordRequest(
-  body,
-  signatureHex,
-  timestamp,
-  publicKeyHex
-) {
-
-  try {
-
-    if (
-      !body ||
-      !signatureHex ||
-      !timestamp ||
-      !publicKeyHex
-    ) {
-
-      return false;
-
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=UTF-8"
     }
-
-    const publicKeyBytes =
-      hexToUint8Array(
-        publicKeyHex.trim()
-      );
-
-    const signatureBytes =
-      hexToUint8Array(
-        signatureHex.trim()
-      );
-
-    const messageBytes =
-      new TextEncoder().encode(
-        timestamp + body
-      );
-
-    /**
-     * Discord Public Key 為原始 32-byte
-     * Ed25519 公開金鑰
-     */
-    const publicKey =
-      await crypto.subtle.importKey(
-        "raw",
-        publicKeyBytes,
-        {
-          name: "Ed25519"
-        },
-        false,
-        ["verify"]
-      );
-
-    return await crypto.subtle.verify(
-      {
-        name: "Ed25519"
-      },
-      publicKey,
-      signatureBytes,
-      messageBytes
-    );
-
-  } catch (error) {
-
-    logError(
-      "Ed25519 驗證程序發生錯誤",
-      error
-    );
-
-    return false;
-
-  }
-
+  });
 }
 
-/**
- * ==========================================================
- * 十六進位字串轉 Uint8Array
- * ==========================================================
- *
- * @param {string} hex
- * @returns {Uint8Array}
- */
-function hexToUint8Array(hex) {
+async function verifyDiscordRequest(
+  request,
+  body,
+  publicKey
+) {
+  if (!publicKey) return false;
 
-  if (
-    typeof hex !== "string" ||
-    hex.length === 0 ||
-    hex.length % 2 !== 0 ||
-    !/^[0-9a-fA-F]+$/.test(hex)
-  ) {
+  const signature =
+    request.headers.get("X-Signature-Ed25519");
 
-    throw new Error(
-      "無效的十六進位字串"
-    );
+  const timestamp =
+    request.headers.get("X-Signature-Timestamp");
 
+  if (!signature || !timestamp) {
+    return false;
   }
 
-  const result =
-    new Uint8Array(
-      hex.length / 2
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      hexToBytes(publicKey),
+      { name: "Ed25519" },
+      false,
+      ["verify"]
     );
 
-  for (
-    let index = 0;
-    index < hex.length;
-    index += 2
-  ) {
+    const message =
+      new TextEncoder().encode(timestamp + body);
 
-    result[index / 2] =
-      Number.parseInt(
-        hex.substring(
-          index,
-          index + 2
-        ),
-        16
-      );
+    return await crypto.subtle.verify(
+      "Ed25519",
+      key,
+      hexToBytes(signature),
+      message
+    );
+  } catch {
+    return false;
+  }
+}
 
+function hexToBytes(hex) {
+  const clean = String(hex || "").trim();
+
+  if (!/^[0-9a-f]+$/i.test(clean) || clean.length % 2) {
+    throw new Error("Invalid hex");
   }
 
-  return result;
+  const bytes = new Uint8Array(clean.length / 2);
 
+  for (let index = 0; index < clean.length; index += 2) {
+    bytes[index / 2] = parseInt(clean.slice(index, index + 2), 16);
+  }
+
+  return bytes;
 }

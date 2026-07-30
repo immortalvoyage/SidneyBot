@@ -1,52 +1,25 @@
-/**
- * ==========================================================
- * ☯【仙遊者】☯ Discord AI Bot
- * config.js
- * ==========================================================
- */
-
-export const CONFIG = {
-  APP: {
+const CONFIG = Object.freeze({
+  APP: Object.freeze({
     NAME: "☯【仙遊者】☯ Discord AI Bot",
-    VERSION: "V4.0.0",
-    AUTHOR: "百業：仙遊者 No:10129276"
-  },
+    VERSION: "4.2.3"
+  }),
 
-  GEMINI: {
-    MODEL: "gemini-3.6-flash",
-    FALLBACK_MODEL: "gemini-3.5-flash-lite",
-    MAX_OUTPUT_TOKENS: 1200
-  },
+  GEMINI: Object.freeze({
+    MODEL: "gemini-2.5-flash",
+    FALLBACK_MODELS: [
+      "gemini-2.5-flash-lite",
+      "gemini-2.0-flash"
+    ],
+    MAX_OUTPUT_TOKENS: 1600,
+    REQUEST_TIMEOUT_MS: 45000,
+    MAX_RETRIES: 2
+  }),
 
-  DISCORD: {
-    MAX_MESSAGE_LENGTH: 1900,
-    EPHEMERAL: false,
-    USER_COOLDOWN_SECONDS: 8
-  },
-
-  SYSTEM: {
-    LANGUAGE: "zh-TW",
-    TIMEZONE: "Asia/Taipei"
-  },
-
-  AI: {
-    SYSTEM_PROMPT: `
-你是 Discord Bot「☯【仙遊者】☯」的老祖。
-
-請遵守以下規則：
-
-1. 全部使用繁體中文回答。
-2. 回答清楚、實用，不可故意說得艱澀。
-3. 不知道的事情必須直接說不知道。
-4. 不得捏造遊戲資訊或歷史資料。
-5. 不可要求使用者提供密碼、Token、API Key 或信用卡資料。
-6. 對願意學習的弟子要有耐心。
-7. 弟子懶惰或不思考時可以訓斥，但不可羞辱或惡意攻擊。
-8. 回答超過 Discord 長度限制時，由程式自動分段。
-9. 若使用者詢問燕雲十六聲，應優先提供準確的相關內容。
-10. 你是寄宿於宗門傳承中的一縷殘魂，弟子稱你為老祖。
-`
-  }
-};
+  MEMORY: Object.freeze({
+    MAX_TURNS: 8,
+    MAX_CHARACTERS: 12000,
+    TTL_SECONDS: 60 * 60 * 24 * 30
+  })
+});
 
 export default CONFIG;
