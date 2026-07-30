@@ -1,0 +1,23 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "sidney-discord-ai-bot",
+	"main": "worker.js",
+	"compatibility_date": "2026-07-29",
+	"workers_dev": true,
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		"BOT_NAME": "☯【仙遊者】☯",
+		"DEFAULT_LANGUAGE": "zh-TW",
+		"MAX_OUTPUT_TOKENS": "1200",
+		"USER_COOLDOWN_SECONDS": "8"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "BOT_MEMORY",
+			"id": "cf0fce4929484ce689b8c9af9abe4aaf",
+			"remote": true
+		}
+	]
+}
