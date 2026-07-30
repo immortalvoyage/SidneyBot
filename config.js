@@ -5,10 +5,10 @@ const CONFIG = Object.freeze({
   }),
 
   GEMINI: Object.freeze({
-    MODEL: "gemini-2.5-flash",
+    MODEL: "gemini-3.5-flash-lite",
     FALLBACK_MODELS: [
-      "gemini-2.5-flash-lite",
-      "gemini-2.0-flash"
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite"
     ],
     MAX_OUTPUT_TOKENS: 1600,
     REQUEST_TIMEOUT_MS: 45000,
