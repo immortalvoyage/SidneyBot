@@ -57,7 +57,7 @@ function extractText(data) {
 }
 
 function retryable(status) {
-  return status === 429 || status >= 500;
+  return status >= 500;
 }
 
 async function requestOnce({
@@ -107,11 +107,9 @@ async function requestOnce({
           parts: [{ text: systemPrompt }]
         },
         contents,
-        generationConfig: {
-          temperature: 0.75,
-          topP: 0.9,
-          maxOutputTokens
-        },
+			generationConfig: {
+			  maxOutputTokens
+			},
         safetySettings: [
           {
             category: "HARM_CATEGORY_HARASSMENT",
