@@ -7,7 +7,7 @@
  * /forget  私密
  */
 
-import { askGemini } from "./gemini.js";
+import { askGemini, GeminiApiError } from "./gemini.js";
 
 import {
   deferredResponse,
@@ -254,16 +254,12 @@ await sendLongReply(
     );
 
     try {
+      const errorMessage = buildGeminiErrorMessage(error);
+
       await sendLongReply(
         interaction.application_id,
         interaction.token,
-		[
-			"⚠️ 老祖目前有點忙碌，Google Gemini 服務暫時壅塞。",
-			"",
-			"請稍候片刻後再次使用 `/ai`。",
-			"",
-			"錯誤代碼：503 UNAVAILABLE"
-		].join("\n"),
+        errorMessage,
         false
       );
     } catch (replyError) {
@@ -273,6 +269,67 @@ await sendLongReply(
       );
     }
   }
+}
+
+function buildGeminiErrorMessage(error) {
+  const status =
+    error instanceof GeminiApiError
+      ? error.status
+      : 0;
+
+  const code =
+    error instanceof GeminiApiError
+      ? error.code
+      : "UNKNOWN";
+
+  if (status === 429) {
+    return [
+      "⚠️ 老祖今日接收的傳音過多，Gemini 額度或速率暫時受限。",
+      "",
+      "請稍候片刻再使用 `/ai`。",
+      "",
+      `錯誤代碼：${status} ${code}`
+    ].join("\n");
+  }
+
+  if ([500, 502, 503, 504].includes(status)) {
+    return [
+      "⚠️ 老祖目前有點忙碌，Google Gemini 服務暫時不穩定。",
+      "",
+      "程式已自動重試並切換備援模型，但仍未成功。",
+      "請稍候片刻後再次使用 `/ai`。",
+      "",
+      `錯誤代碼：${status || "未知"} ${code}`
+    ].join("\n");
+  }
+
+  if (status === 401 || status === 403) {
+    return [
+      "⚠️ Gemini API 金鑰或專案權限設定有誤。",
+      "",
+      "請檢查 Cloudflare Worker Secret：`GEMINI_API_KEY`。",
+      "",
+      `錯誤代碼：${status} ${code}`
+    ].join("\n");
+  }
+
+  if (status === 404) {
+    return [
+      "⚠️ 目前設定的 Gemini 模型不存在或已停止提供。",
+      "",
+      "請檢查 `config.js` 內的模型名稱。",
+      "",
+      `錯誤代碼：${status} ${code}`
+    ].join("\n");
+  }
+
+  return [
+    "⚠️ 老祖傳音時發生未預期錯誤。",
+    "",
+    "請查看 Cloudflare Workers Logs 取得詳細原因。",
+    "",
+    `錯誤代碼：${status || "未知"} ${code}`
+  ].join("\n");
 }
 
 /**

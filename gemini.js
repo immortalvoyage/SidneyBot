@@ -102,6 +102,8 @@ PVE、PVP輸出軸與手法
 
 偶爾會露出幽默的一面。
 
+你的態度對 凜冬皓月 時是不同的,會變的格外溫柔且有耐心又百依百順。
+
 說話風格
 
 永遠使用繁體中文。
@@ -378,25 +380,28 @@ PVE、PVP輸出軸與手法
 `.trim();
 
 /**
- * 判斷是否為可重試的 HTTP 狀態
+ * Gemini API 錯誤。
+ * 保留真實 HTTP 狀態與 API 訊息，避免所有錯誤都被誤報成 503。
  */
-function isRetryableStatus(status) {
-  return (
-    status === 429 ||
-    status === 500 ||
-    status === 502 ||
-    status === 503 ||
-    status === 504
-  );
+export class GeminiApiError extends Error {
+  constructor(message, { status = 0, code = "UNKNOWN", model = "" } = {}) {
+    super(message);
+    this.name = "GeminiApiError";
+    this.status = status;
+    this.code = code;
+    this.model = model;
+  }
 }
 
 /**
- * 解析 Gemini 回應
+ * 判斷是否為可重試的 HTTP 狀態。
  */
+function isRetryableStatus(status) {
+  return [408, 429, 500, 502, 503, 504].includes(status);
+}
+
 function parseJson(rawText) {
-  if (!rawText) {
-    return null;
-  }
+  if (!rawText) return null;
 
   try {
     return JSON.parse(rawText);
@@ -405,8 +410,137 @@ function parseJson(rawText) {
   }
 }
 
+function getApiErrorCode(json, status) {
+  return (
+    json?.error?.status ||
+    json?.error?.details?.[0]?.reason ||
+    `HTTP_${status}`
+  );
+}
+
+function getApiErrorMessage(json, rawText, status) {
+  return (
+    json?.error?.message ||
+    json?.message ||
+    rawText ||
+    `Gemini HTTP ${status}`
+  );
+}
+
+function buildModelList() {
+  return [
+    CONFIG.GEMINI.MODEL,
+    CONFIG.GEMINI.FALLBACK_MODEL
+  ].filter((model, index, list) => model && list.indexOf(model) === index);
+}
+
 /**
- * 呼叫 Gemini
+ * 對單一模型發出請求。
+ * 每次重試都建立新的 AbortController，避免第一個逾時計時器連帶中止後續重試。
+ */
+async function requestModel(model, body, env) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/${model}:generateContent`,
+        {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": env.GEMINI_API_KEY
+          },
+          body: JSON.stringify(body)
+        }
+      );
+
+      // Response body 僅讀取一次。
+      const rawText = await response.text();
+      const json = parseJson(rawText);
+
+      if (response.ok) {
+        return { json, model };
+      }
+
+      const code = getApiErrorCode(json, response.status);
+      const apiMessage = getApiErrorMessage(json, rawText, response.status);
+
+      lastError = new GeminiApiError(
+        `Gemini ${model} 回覆失敗：${apiMessage}`,
+        {
+          status: response.status,
+          code,
+          model
+        }
+      );
+
+      console.error("Gemini API 錯誤", {
+        model,
+        attempt: attempt + 1,
+        status: response.status,
+        code,
+        message: apiMessage
+      });
+
+      const isLastAttempt = attempt === MAX_RETRIES;
+
+      if (!isRetryableStatus(response.status) || isLastAttempt) {
+        throw lastError;
+      }
+
+      // 1 秒、2 秒、4 秒，並加入少量隨機抖動。
+      const delay = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
+      await sleep(delay);
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        lastError = new GeminiApiError(
+          `Gemini ${model} 回覆逾時。`,
+          {
+            status: 504,
+            code: "CLIENT_TIMEOUT",
+            model
+          }
+        );
+      } else if (error instanceof GeminiApiError) {
+        lastError = error;
+      } else {
+        lastError = new GeminiApiError(
+          `Gemini ${model} 連線失敗：${error?.message || String(error)}`,
+          {
+            status: 0,
+            code: "NETWORK_ERROR",
+            model
+          }
+        );
+      }
+
+      const isLastAttempt = attempt === MAX_RETRIES;
+      const retryable =
+        lastError.status === 0 ||
+        isRetryableStatus(lastError.status);
+
+      if (!retryable || isLastAttempt) {
+        throw lastError;
+      }
+
+      const delay = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
+      await sleep(delay);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  throw lastError || new GeminiApiError("Gemini 請求失敗");
+}
+
+/**
+ * 呼叫 Gemini。
+ * 主模型重試失敗後，自動切換備援模型。
  */
 export async function askGemini(
   question,
@@ -415,21 +549,20 @@ export async function askGemini(
   profile = {}
 ) {
   if (!env?.GEMINI_API_KEY) {
-    throw new Error("尚未設定 GEMINI_API_KEY");
+    throw new GeminiApiError("尚未設定 GEMINI_API_KEY", {
+      status: 401,
+      code: "MISSING_API_KEY"
+    });
   }
 
-  const normalizedQuestion =
-    String(question ?? "").trim();
+  const normalizedQuestion = String(question ?? "").trim();
 
   if (!normalizedQuestion) {
-    throw new Error("問題內容不可為空白");
+    throw new GeminiApiError("問題內容不可為空白", {
+      status: 400,
+      code: "EMPTY_QUESTION"
+    });
   }
-
-  const controller = new AbortController();
-
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-  }, REQUEST_TIMEOUT_MS);
 
   const contents = [
     ...(Array.isArray(history) ? history : []),
@@ -449,154 +582,67 @@ export async function askGemini(
     }
   ];
 
-  let response = null;
-  let rawText = "";
+  const body = {
+    systemInstruction: {
+      parts: [{ text: SYSTEM_PROMPT }]
+    },
+    generationConfig: {
+      temperature: CONFIG.GEMINI.TEMPERATURE,
+      maxOutputTokens: CONFIG.GEMINI.MAX_OUTPUT_TOKENS
+    },
+    contents
+  };
 
-  try {
-    for (
-      let attempt = 0;
-      attempt <= MAX_RETRIES;
-      attempt++
-    ) {
-      response = await fetch(
-        `${API_BASE}/${CONFIG.GEMINI.MODEL}:generateContent`,
-        {
-          method: "POST",
-          signal: controller.signal,
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": env.GEMINI_API_KEY
-          },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [
-                {
-                  text: SYSTEM_PROMPT
-                }
-              ]
-            },
+  let lastError = null;
 
-            generationConfig: {
-              temperature:
-                CONFIG.GEMINI.TEMPERATURE,
+  for (const model of buildModelList()) {
+    try {
+      const { json } = await requestModel(model, body, env);
 
-              maxOutputTokens:
-                CONFIG.GEMINI.MAX_OUTPUT_TOKENS
-            },
-
-            contents
-          })
-        }
-      );
-
-      // 每一次 Response 只能讀取一次
-      rawText = await response.text();
-
-      if (response.ok) {
-        break;
+      if (!json) {
+        throw new GeminiApiError("Gemini 回傳的資料格式無法解析", {
+          status: 502,
+          code: "INVALID_RESPONSE",
+          model
+        });
       }
 
-      const canRetry =
-        isRetryableStatus(response.status);
-
-      const isLastAttempt =
-        attempt === MAX_RETRIES;
-
-      if (!canRetry || isLastAttempt) {
-        break;
-      }
-
-      // 1 秒、2 秒、4 秒
-      const delay =
-        1000 * Math.pow(2, attempt);
-
-      console.warn(
-        `Gemini HTTP ${response.status}，` +
-        `${delay}ms 後進行第 ${attempt + 2} 次嘗試`
-      );
-
-      await sleep(delay);
-    }
-
-    if (!response) {
-      throw new Error("Gemini 沒有建立有效連線");
-    }
-
-    const json = parseJson(rawText);
-
-    if (!response.ok) {
-      const apiMessage =
-        json?.error?.message ||
-        json?.message ||
-        rawText ||
-        "Gemini 服務暫時無法使用";
-
-      if (response.status === 503) {
-        throw new Error(
-          "Gemini 目前服務繁忙，已自動重試多次仍無法連線，請稍後再試。"
-        );
-      }
-
-      if (response.status === 429) {
-        throw new Error(
-          "Gemini 請求次數暫時超過限制，請稍後再試。"
-        );
-      }
-
-      throw new Error(
-        `Gemini HTTP ${response.status}：${apiMessage}`
-      );
-    }
-
-    if (!json) {
-      throw new Error(
-        "Gemini 回傳的資料格式無法解析"
-      );
-    }
-
-    const answer =
-      json?.candidates?.[0]
-        ?.content?.parts
+      const answer = json?.candidates?.[0]?.content?.parts
         ?.map(part => part?.text || "")
         .join("")
         .trim();
 
-    if (answer) {
-      return answer;
-    }
+      if (answer) {
+        return answer;
+      }
 
-    const blockReason =
-      json?.promptFeedback?.blockReason;
+      const blockReason = json?.promptFeedback?.blockReason;
+      if (blockReason) {
+        throw new GeminiApiError(`Gemini 拒絕此請求：${blockReason}`, {
+          status: 400,
+          code: "PROMPT_BLOCKED",
+          model
+        });
+      }
 
-    if (blockReason) {
-      throw new Error(
-        `Gemini 拒絕此請求：${blockReason}`
+      const finishReason = json?.candidates?.[0]?.finishReason;
+      throw new GeminiApiError(
+        finishReason
+          ? `Gemini 沒有回傳文字，結束原因：${finishReason}`
+          : "Gemini 沒有回傳文字內容",
+        {
+          status: 502,
+          code: finishReason || "EMPTY_RESPONSE",
+          model
+        }
       );
+    } catch (error) {
+      lastError = error;
+      console.warn(`模型 ${model} 無法完成請求，準備嘗試下一個模型。`);
     }
-
-    const finishReason =
-      json?.candidates?.[0]?.finishReason;
-
-    if (finishReason) {
-      throw new Error(
-        `Gemini 沒有回傳文字，結束原因：${finishReason}`
-      );
-    }
-
-    throw new Error(
-      "Gemini 沒有回傳文字內容"
-    );
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new Error(
-        "Gemini 回覆逾時，請稍後再試或縮短問題內容。"
-      );
-    }
-
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  throw lastError || new GeminiApiError("所有 Gemini 模型皆無法使用");
 }
 
 export default {
