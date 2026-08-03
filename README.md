@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.2.15
+# ☯【仙遊者】☯ Discord AI Bot V4.2.16
 
 完整獨立版，使用：
 
@@ -26,6 +26,7 @@
 - `/help`
 - `/game bind|status|pending|approve|reject`
 - `/audit recent|view`
+- `/system check|repair`
 
 ## 宗門權限
 
@@ -38,6 +39,7 @@
 - 正式成員可用 `/profile set-name` 修改仙遊者名冊顯示名稱；不會修改 Discord 或遊戲角色名稱
 - `/game approve`、`/game reject` 只顯示 KV 中仍待審且仍是正式成員的申請者
 - `/audit` 只允許宗主私密查看最近操作紀錄與單筆詳情
+- `/system check` 只讀檢查名冊、申請、Audit 與待審遊戲綁定索引；`/system repair` 經確認後只重建索引，不刪除實體資料
 
 ## 1. 安裝
 
@@ -124,6 +126,7 @@ npm run register
 7. 執行 `/profile view`
 8. 執行 `/profile set-name name:凜冬皓月`，再用 `/sect` 確認名稱
 9. 執行 `/forget`
+10. 宗主執行 `/system check`，確認正式 KV 索引狀態
 
 ## KV Key 結構
 

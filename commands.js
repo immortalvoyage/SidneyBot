@@ -47,6 +47,7 @@ import { handleProfile } from "./src/commands/profile.js";
 import { handleForget } from "./src/commands/forget.js";
 import { handleGame } from "./src/commands/game.js";
 import { handleAudit } from "./src/commands/audit.js";
+import { handleSystem } from "./src/commands/system.js";
 
 export async function handleCommand(
   interaction,
@@ -89,6 +90,9 @@ export async function handleCommand(
 
       case "audit":
         return await handleAudit(interaction, env);
+
+      case "system":
+        return await handleSystem(interaction, env);
 
       case "help":
         return await handleHelp(interaction, env);
@@ -162,7 +166,9 @@ async function handleHelp(interaction, env) {
       "`/member set-rank player:<名冊玩家> rank:<弟子或長老> note:<備註>`：調整正式成員身分",
       "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：將成員移出名冊",
       "`/audit recent`：查看最近 10 筆操作紀錄",
-      "`/audit view record:<紀錄>`：查看單筆操作詳情"
+      "`/audit view record:<紀錄>`：查看單筆操作詳情",
+      "`/system check`：檢查 KV 名冊與審核索引一致性",
+      "`/system repair confirm:<確認修復>`：安全重建 KV 索引"
     );
   }
 

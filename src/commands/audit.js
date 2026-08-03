@@ -12,7 +12,8 @@ const ACTION_LABELS = Object.freeze({
   "member.rank_changed": "調整成員身分",
   "member.removed": "移除成員",
   "member.display_name_changed": "修改顯示名稱",
-  "memory.cleared": "清除 AI 記憶"
+  "memory.cleared": "清除 AI 記憶",
+  "system.kv_indexes_repaired": "修復 KV 索引"
 });
 
 function subcommand(interaction) {
@@ -44,12 +45,17 @@ function formatDetails(details) {
     displayName: "成員名稱",
     note: "備註",
     reason: "理由",
-    gameBindingPreserved: "保留遊戲綁定"
+    gameBindingPreserved: "保留遊戲綁定",
+    changedIndexes: "修復索引",
+    restoredEntries: "補回索引數",
+    removedEntries: "移除失效／重複索引數"
   };
 
   for (const [key, label] of Object.entries(labels)) {
     if (!(key in details)) continue;
-    const value = typeof details[key] === "boolean"
+    const value = Array.isArray(details[key])
+      ? details[key].join("、")
+      : typeof details[key] === "boolean"
       ? (details[key] ? "是" : "否")
       : details[key];
     lines.push(`${label}：${safeText(value)}`);

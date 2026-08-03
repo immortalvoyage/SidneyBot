@@ -1,4 +1,4 @@
-SidneyBot V4.2.15 verification
+SidneyBot V4.2.16 verification
 
 - Automated tests: 48/48 passed
 - JavaScript syntax checks: 52/52 passed

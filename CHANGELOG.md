@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.2.16
+
+- Added master-only `/system check` and `/system repair` commands.
+- Detects missing, stale, and duplicate entries across member, application, Audit, and pending game-binding indexes.
+- Repair rebuilds indexes from existing KV records without deleting record data and preserves chronological ordering.
+- Added `system.kv_indexes_repaired` Audit records and authorization/repair regression tests.
+
 ## 4.2.15
 
 - Added master-only `/audit recent` and `/audit view record:<record>` commands.

@@ -214,6 +214,31 @@ const COMMANDS = [
       }
     ]
   },
+  {
+    name: "system",
+    description: "宗主私密檢查與修復系統資料索引",
+    options: [
+      {
+        name: "check",
+        description: "只讀檢查 KV 資料與索引一致性",
+        type: 1
+      },
+      {
+        name: "repair",
+        description: "安全重建 KV 索引，不刪除實體資料",
+        type: 1,
+        options: [
+          {
+            name: "confirm",
+            description: "確認執行索引修復",
+            type: 3,
+            required: true,
+            choices: [{ name: "確認修復索引", value: "REPAIR" }]
+          }
+        ]
+      }
+    ]
+  },
   { name: "help", description: "私密查看 Bot 使用說明" }
 ];
 
