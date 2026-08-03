@@ -1,4 +1,3 @@
-import { immediateResponse } from "../../discord.js";
 import {
   getOptionValue,
   getUser
@@ -6,11 +5,9 @@ import {
 
 import { resolveActor, approveApplicant } from "../sect/service.js";
 import { syncDiscordMemberRank } from "../sect/discord-roles.js";
+import { runDeferredCommand } from "./deferred.js";
 
-export async function handleApprove(interaction, env) {
-  const actorUser = getUser(interaction);
-  const actor = await resolveActor(env, actorUser);
-
+export async function handleApprove(interaction, env, ctx) {
   const targetUserId = String(
     getOptionValue(interaction, "applicant") || ""
   ).trim();
@@ -20,13 +17,14 @@ export async function handleApprove(interaction, env) {
   ).trim();
 
   if (!targetUserId) {
-    return immediateResponse(
-      "❌ 請從待審申請選單選擇申請者。",
-      true
-    );
+    return runDeferredCommand(interaction, null, "入宗核准", async () => {
+      throw new Error("請從待審申請選單選擇申請者。");
+    });
   }
 
-  try {
+  return runDeferredCommand(interaction, ctx, "入宗核准", async () => {
+    const actorUser = getUser(interaction);
+    const actor = await resolveActor(env, actorUser);
     const member = await approveApplicant(
       env,
       actor,
@@ -40,20 +38,12 @@ export async function handleApprove(interaction, env) {
       )
     );
 
-    return immediateResponse(
-      [
+    return [
         "✅ 已批准入宗。",
         `成員：${member.displayName}`,
         `Discord ID：${member.userId}`,
         `身分：${member.rank}`,
         "Discord 身分組：已同步為弟子"
-      ].join("\n"),
-      true
-    );
-  } catch (error) {
-    return immediateResponse(
-      `❌ ${error.message}`,
-      true
-    );
-  }
+      ].join("\n");
+  });
 }

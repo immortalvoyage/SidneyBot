@@ -11,6 +11,7 @@ import {
   setMemberRank
 } from "../sect/service.js";
 import { syncDiscordMemberRank } from "../sect/discord-roles.js";
+import { runDeferredCommand } from "./deferred.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -22,7 +23,7 @@ function subOption(interaction, name) {
   )?.value;
 }
 
-export async function handleMember(interaction, env) {
+export async function handleMember(interaction, env, ctx) {
   const action = subcommand(interaction)?.name;
 
   if (!["get", "set-rank", "remove"].includes(action)) {
@@ -33,9 +34,8 @@ export async function handleMember(interaction, env) {
   }
 
   try {
-    const actor = await resolveActor(env, getUser(interaction));
-
     if (action === "get") {
+      const actor = await resolveActor(env, getUser(interaction));
       const targetId = String(subOption(interaction, "player") || "").trim();
       if (!targetId) throw new Error("請從仙遊者名冊選擇玩家");
       if (!actor || !canManageRanks(actor.rank)) {
@@ -65,11 +65,39 @@ export async function handleMember(interaction, env) {
     }
 
     if (action === "remove") {
-      const removed = await removeSectMember(
+      return runDeferredCommand(interaction, ctx, "成員移除", async () => {
+        const actor = await resolveActor(env, getUser(interaction));
+        const removed = await removeSectMember(
+          env,
+          actor,
+          subOption(interaction, "player"),
+          subOption(interaction, "confirm"),
+          subOption(interaction, "note") || "",
+          (userId, rank) => syncDiscordMemberRank(
+            env,
+            interaction.guild_id,
+            userId,
+            rank
+          )
+        );
+
+        return [
+          "✅ 已將成員移出仙遊者名冊。",
+          `成員：${removed.displayName}`,
+          `Discord ID：${removed.userId}`,
+          "燕雲 UID 綁定與歷史資料：已保留",
+          "Discord 弟子／長老身分組：已撤銷"
+        ].join("\n");
+      });
+    }
+
+    return runDeferredCommand(interaction, ctx, "成員身分調整", async () => {
+      const actor = await resolveActor(env, getUser(interaction));
+      const member = await setMemberRank(
         env,
         actor,
         subOption(interaction, "player"),
-        subOption(interaction, "confirm"),
+        subOption(interaction, "rank"),
         subOption(interaction, "note") || "",
         (userId, rank) => syncDiscordMemberRank(
           env,
@@ -79,42 +107,14 @@ export async function handleMember(interaction, env) {
         )
       );
 
-      return immediateResponse(
-        [
-          "✅ 已將成員移出仙遊者名冊。",
-          `成員：${removed.displayName}`,
-          `Discord ID：${removed.userId}`,
-          "燕雲 UID 綁定與歷史資料：已保留",
-          "Discord 弟子／長老身分組：已撤銷"
-        ].join("\n"),
-        true
-      );
-    }
-
-    const member = await setMemberRank(
-      env,
-      actor,
-      subOption(interaction, "player"),
-      subOption(interaction, "rank"),
-      subOption(interaction, "note") || "",
-      (userId, rank) => syncDiscordMemberRank(
-        env,
-        interaction.guild_id,
-        userId,
-        rank
-      )
-    );
-
-    return immediateResponse(
-      [
+      return [
         "✅ 已調整成員身分。",
         `成員：${member.displayName}`,
         `Discord ID：${member.userId}`,
         `新身分：${RANK_LABEL[member.rank] || member.rank}`,
         "Discord 身分組：已同步"
-      ].join("\n"),
-      true
-    );
+      ].join("\n");
+    });
   } catch (error) {
     return immediateResponse(
       `❌ ${error.message}`,

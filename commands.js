@@ -65,7 +65,7 @@ export async function handleCommand(
         return await handleApply(interaction, env, ctx);
 
       case "approve":
-        return await handleApprove(interaction, env);
+        return await handleApprove(interaction, env, ctx);
 
       case "reject":
         return await handleReject(interaction, env);
@@ -74,7 +74,7 @@ export async function handleCommand(
         return await handleMembers(interaction, env);
 
       case "member":
-        return await handleMember(interaction, env);
+        return await handleMember(interaction, env, ctx);
 
       case "sect":
         return await handleSect(interaction, env);
@@ -92,7 +92,7 @@ export async function handleCommand(
         return await handleAudit(interaction, env);
 
       case "system":
-        return await handleSystem(interaction, env);
+        return await handleSystem(interaction, env, ctx);
 
       case "help":
         return await handleHelp(interaction, env);

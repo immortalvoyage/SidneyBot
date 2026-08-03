@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.2.18
+
+- 耗時管理指令先回覆 Discord 私密 deferred acknowledgement，再於背景更新原訊息。
+- `/approve`、`/member set-rank`、`/member remove`、`/system check`、`/system repair` 套用逾時保護。
+- 背景失敗會寫入錯誤日誌並將安全錯誤訊息更新至原 Discord 回覆。
+- Slash Command 結構未變更，不需要重新註冊。
+
 ## 4.2.17
 
 - `/members` 新增可選的 `page` 頁碼參數。

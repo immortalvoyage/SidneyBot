@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.2.17
+# ☯【仙遊者】☯ Discord AI Bot V4.2.18
 
 完整獨立版，使用：
 
@@ -41,6 +41,7 @@
 - `/audit` 只允許宗主私密查看最近操作紀錄與單筆詳情
 - `/system check` 只讀檢查名冊、申請、Audit 與待審遊戲綁定索引；`/system repair` 經確認後只重建索引，不刪除實體資料
 - `/members` 每頁最多顯示 15 人，避免名冊成長後超過 Discord 訊息限制
+- `/approve`、`/member set-rank`、`/member remove`、`/system check`、`/system repair` 會先回覆私密等待狀態，再於背景更新結果，避免 Discord 首次回覆逾時
 
 ## 1. 安裝
 
@@ -128,6 +129,7 @@ npm run register
 8. 執行 `/profile set-name name:凜冬皓月`，再用 `/sect` 確認名稱
 9. 執行 `/forget`
 10. 宗主執行 `/system check`，確認正式 KV 索引狀態
+11. 執行 `/approve` 或 `/system check` 時，確認 Discord 先顯示等待狀態，完成後由原訊息更新結果
 
 ## KV Key 結構
 
@@ -171,3 +173,4 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 - `/member set-rank`：依 KV 新身分切換弟子／長老
 - `/member remove`：撤銷弟子與長老，保留玩家其他身分組
 - Discord 同步失敗時不會繼續修改 KV，指令會回報錯誤
+- 耗時管理操作已採 Discord deferred 回覆；本版本沒有修改 Slash Command 結構，從 V4.2.17 更新時不必重新註冊

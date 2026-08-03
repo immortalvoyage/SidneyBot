@@ -11,7 +11,7 @@ function createEnv() {
   const values = new Map();
   return {
     SECT_MASTER_ID: "master-1",
-    APP_VERSION: "4.2.17",
+    APP_VERSION: "4.2.18",
     BOT_MEMORY: {
       async get(key) {
         const value = values.get(key);
