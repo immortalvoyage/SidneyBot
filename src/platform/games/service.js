@@ -99,6 +99,9 @@ export async function approveGameBinding(env, {
 } = {}) {
   const request = await getBindingRequest(env, gameId, userId);
   if (!request) throw new Error("找不到此綁定申請");
+  if (request.status !== BINDING_STATUS.PENDING) {
+    throw new Error("此綁定申請已完成審核，請重新開啟待審選單");
+  }
 
   const existing = await kvGet(
     env,
@@ -154,6 +157,9 @@ export async function rejectGameBinding(env, {
 } = {}) {
   const request = await getBindingRequest(env, gameId, userId);
   if (!request) throw new Error("找不到此綁定申請");
+  if (request.status !== BINDING_STATUS.PENDING) {
+    throw new Error("此綁定申請已完成審核，請重新開啟待審選單");
+  }
 
   const next = {
     ...request,

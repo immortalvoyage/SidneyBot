@@ -66,19 +66,30 @@ export async function handleGame(interaction, env) {
 
   if (action === "pending") {
     const rows = await listPendingBindings(env, GAME_IDS.WWM);
-    if (rows.length === 0) return immediateResponse("目前沒有待審 UID 綁定。", true);
+    const eligibleRows = (await Promise.all(rows.map(async item => ({
+      item,
+      member: await getMember(env, item.userId)
+    }))))
+      .filter(({ member: target }) => target && canUseAI(target.rank))
+      .map(({ item }) => item);
+    if (eligibleRows.length === 0) return immediateResponse("目前沒有待審 UID 綁定。", true);
     return immediateResponse([
       "## 待審 UID 綁定",
-      ...rows.slice(0, 20).map(item =>
+      ...eligibleRows.slice(0, 20).map(item =>
         `• <@${item.userId}>｜Discord ID: ${item.userId}｜UID: ${item.uid}｜角色: ${item.characterName}`
       )
     ].join("\n"), true);
   }
 
   if (action === "approve") {
+    const targetUserId = String(subOption(interaction, "applicant") || "");
+    const targetMember = await getMember(env, targetUserId);
+    if (!targetMember || !canUseAI(targetMember.rank)) {
+      return immediateResponse("❌ 該申請者目前不是仙遊者正式成員，不能核准綁定。", true);
+    }
     const account = await approveGameBinding(env, {
       gameId: GAME_IDS.WWM,
-      userId: String(subOption(interaction, "user") || ""),
+      userId: targetUserId,
       reviewerId: userId,
       note: subOption(interaction, "note") || ""
     });
@@ -89,9 +100,14 @@ export async function handleGame(interaction, env) {
   }
 
   if (action === "reject") {
+    const targetUserId = String(subOption(interaction, "applicant") || "");
+    const targetMember = await getMember(env, targetUserId);
+    if (!targetMember || !canUseAI(targetMember.rank)) {
+      return immediateResponse("❌ 該申請者目前不是仙遊者正式成員，不能處理綁定。", true);
+    }
     const record = await rejectGameBinding(env, {
       gameId: GAME_IDS.WWM,
-      userId: String(subOption(interaction, "user") || ""),
+      userId: targetUserId,
       reviewerId: userId,
       note: subOption(interaction, "note") || ""
     });

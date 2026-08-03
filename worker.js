@@ -3,6 +3,7 @@ import { logError } from "./logger.js";
 import { handlePlatformApi } from "./src/platform/games/api.js";
 import { handleMemberAutocomplete } from "./src/commands/member-autocomplete.js";
 import { handleApplicationAutocomplete } from "./src/commands/application-autocomplete.js";
+import { handleGameBindingAutocomplete } from "./src/commands/game-binding-autocomplete.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -58,6 +59,9 @@ export default {
     if (interaction.type === APPLICATION_COMMAND_AUTOCOMPLETE) {
       if (["approve", "reject"].includes(interaction.data?.name)) {
         return handleApplicationAutocomplete(interaction, env);
+      }
+      if (interaction.data?.name === "game") {
+        return handleGameBindingAutocomplete(interaction, env);
       }
       return handleMemberAutocomplete(interaction, env);
     }

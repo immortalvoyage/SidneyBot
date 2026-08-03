@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.2.11
+# ☯【仙遊者】☯ Discord AI Bot V4.2.12
 
 完整獨立版，使用：
 
@@ -23,6 +23,7 @@
 - `/profile`
 - `/forget`
 - `/help`
+- `/game bind|status|pending|approve|reject`
 
 ## 宗門權限
 
@@ -31,6 +32,7 @@
 - 長老：包含弟子權限，可批准／拒絕申請
 - 宗主：完整權限；`SECT_MASTER_ID` 第一次互動時自動建立宗主名冊
 - 指令授權以即時 KV 名冊為準，不信任殘留的 Discord 身分組
+- `/game approve`、`/game reject` 只顯示 KV 中仍待審且仍是正式成員的申請者
 
 ## 1. 安裝
 

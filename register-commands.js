@@ -149,7 +149,7 @@ const COMMANDS = [
         description: "核准 UID 綁定（宗主／長老）",
         type: 1,
         options: [
-          { name: "user", description: "選擇申請者", type: 6, required: true },
+          { name: "applicant", description: "從 KV 待審綁定搜尋申請者", type: 3, required: true, autocomplete: true },
           { name: "note", description: "審核備註", type: 3, required: false, max_length: 300 }
         ]
       },
@@ -158,7 +158,7 @@ const COMMANDS = [
         description: "拒絕 UID 綁定（宗主／長老）",
         type: 1,
         options: [
-          { name: "user", description: "選擇申請者", type: 6, required: true },
+          { name: "applicant", description: "從 KV 待審綁定搜尋申請者", type: 3, required: true, autocomplete: true },
           { name: "note", description: "拒絕原因", type: 3, required: false, max_length: 300 }
         ]
       }

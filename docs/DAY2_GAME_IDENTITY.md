@@ -5,8 +5,8 @@
 - `/game bind uid:<UID> character_name:<角色名稱>`：玩家提交燕雲 UID 綁定。
 - `/game status`：查看自己的綁定。
 - `/game pending`：宗主／長老查看待審。
-- `/game approve user_id:<Discord ID>`：核准綁定。
-- `/game reject user_id:<Discord ID>`：拒絕綁定。
+- `/game approve applicant:<待審綁定>`：從 KV 待審清單核准綁定。
+- `/game reject applicant:<待審綁定>`：從 KV 待審清單拒絕綁定。
 - `POST /api/v1/wwm/weekly-stats`：供 Google Apps Script 匯入每週資料。
 
 ## API Secret

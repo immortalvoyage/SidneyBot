@@ -122,8 +122,8 @@ function handleHelp(env) {
       "`/game bind uid:<UID> character_name:<角色名稱>`：提交 UID 綁定申請",
       "`/game status`：查看自己的 UID 綁定狀態",
       "`/game pending`：宗主／長老查看待審 UID 綁定",
-      "`/game approve user:<成員>`：宗主／長老核准 UID 綁定",
-      "`/game reject user:<成員>`：宗主／長老拒絕 UID 綁定",
+      "`/game approve applicant:<待審綁定>`：宗主／長老從 KV 待審清單核准 UID 綁定",
+      "`/game reject applicant:<待審綁定>`：宗主／長老從 KV 待審清單拒絕 UID 綁定",
       "",
       "### 入門審核（宗主／長老）",
       "`/approve applicant:<待審申請者>`：從待審清單批准加入仙遊者",
@@ -131,7 +131,7 @@ function handleHelp(env) {
       "",
       "### 使用提醒",
       "成員管理會直接搜尋仙遊者 KV 名冊，不受 Discord 頻道成員選單限制。",
-      "UID 綁定批准仍從 Discord 成員選單選擇申請者。",
+      "UID 綁定審核會直接搜尋 KV 待審清單，並在執行時重新檢查申請者的正式成員身分。",
       "請勿輸入密碼、Token、API Key 或其他機密資料。"
     ].join("\n"),
     true

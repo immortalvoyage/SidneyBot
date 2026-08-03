@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.2.12
+
+- Replaced Discord member pickers in `/game approve` and `/game reject` with autocomplete sourced from pending KV binding requests.
+- Added execution-time checks that a binding is still pending and its applicant is still a formal 仙遊者 member.
+- Prevented already approved or rejected binding requests from being processed again.
+- Hid stale game binding requests belonging to removed members from pending lists and autocomplete.
+- Restricted `/sect` counts and status data to current formal members.
+- Added offline regression tests for game review authorization, stale membership, duplicate review, and `/sect` information disclosure.
+
 ## 4.2.11
 
 - Added Discord disciple/elder role synchronization to application approval, rank changes, and member removal.

@@ -11,14 +11,22 @@ import {
 import {
   listApplications
 } from "../sect/applications.js";
+import { canViewMembers } from "../sect/permissions.js";
 
 export async function handleSect(interaction, env) {
   const user = getUser(interaction);
   await ensureMaster(env, user);
 
-  const [member, members, pending] =
+  const member = await getMember(env, user.id);
+  if (!member || !canViewMembers(member.rank)) {
+    return immediateResponse(
+      "❌ 只有仙遊者正式成員可以查看宗門狀態，請先使用 `/apply` 申請加入。",
+      true
+    );
+  }
+
+  const [members, pending] =
     await Promise.all([
-      getMember(env, user.id),
       listMembers(env),
       listApplications(env)
     ]);

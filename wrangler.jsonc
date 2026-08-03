@@ -5,12 +5,12 @@
   "compatibility_flags": ["nodejs_compat"],
   
   "vars": {
-    "APP_VERSION": "4.2.11",
+    "APP_VERSION": "4.2.12",
     "SECT_NAME": "☯【仙遊者】☯",
     "SECT_MASTER_ID": "1179245490081103994",
-	"APPLICATION_REVIEW_CHANNEL_ID": "1533875614568812605",
-	"DISCORD_DISCIPLE_ROLE_ID": "1512261196449841224",
-	"DISCORD_ELDER_ROLE_ID": "1533885265700061298",
+	"APPLICATION_REVIEW_CHANNEL_ID": "請填入入宗審核頻道 ID",
+	"DISCORD_DISCIPLE_ROLE_ID": "請填入弟子身分組 ID",
+	"DISCORD_ELDER_ROLE_ID": "請填入長老身分組 ID",
 	
     "GEMINI_MODEL": "gemini-3.5-flash-lite",
     "GEMINI_FALLBACK_MODELS": "gemini-2.5-flash,gemini-2.5-flash-lite",
