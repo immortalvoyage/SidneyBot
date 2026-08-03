@@ -29,8 +29,13 @@ import {
 } from "./src/sect/members.js";
 
 import {
-  canUseAI
+  canApprove,
+  canManageRanks,
+  canUseAI,
+  canViewMembers
 } from "./src/sect/permissions.js";
+
+import { RANK_LABEL } from "./src/sect/constants.js";
 
 import { handleApply } from "./src/commands/apply.js";
 import { handleApprove } from "./src/commands/approve.js";
@@ -82,7 +87,7 @@ export async function handleCommand(
         return await handleGame(interaction, env);
 
       case "help":
-        return handleHelp(env);
+        return await handleHelp(interaction, env);
 
       default:
         return immediateResponse(
@@ -100,40 +105,75 @@ export async function handleCommand(
   }
 }
 
-function handleHelp(env) {
-  return immediateResponse(
-    [
-      `## ${env.SECT_NAME || "☯【仙遊者】☯"} AI Bot`,
-      "",
-      "### 老祖與個人功能",
+async function handleHelp(interaction, env) {
+  const user = getUser(interaction);
+  await ensureMaster(env, user);
+  const member = await getMember(env, user.id);
+  const rank = member?.rank || null;
+
+  const lines = [
+    `## ${env.SECT_NAME || "☯【仙遊者】☯"} AI Bot`,
+    `你的身分：${RANK_LABEL[rank] || "尚未入宗"}`,
+    "",
+    "### 目前可用指令",
+    "`/help`：私密查看你目前能使用的指令",
+    "`/profile`：私密查看個人與仙遊者資料",
+    "`/forget`：私密清除自己的 AI 對話記憶"
+  ];
+
+  if (!member) {
+    lines.push(
+      "`/apply reason:<理由>`：私密申請加入仙遊者"
+    );
+  }
+
+  if (rank && canUseAI(rank)) {
+    lines.push(
       "`/ai question:<問題>`：公開向老祖提問",
-      "`/profile`：私密查看個人與仙遊者資料",
-      "`/forget`：私密清除自己的 AI 對話記憶",
-      "",
-      "### 仙遊者成員功能",
-      "`/apply reason:<理由>`：私密申請加入仙遊者",
       "`/sect`：私密查看仙遊者狀態與自己的身分",
       "`/members`：私密查看仙遊者名冊",
-      "`/member get player:<名冊玩家>`：宗主查看成員詳細資料與燕雲綁定",
-      "`/member set-rank player:<名冊玩家> rank:<弟子或長老> note:<備註>`：宗主調整正式成員身分",
-      "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：宗主將成員移出名冊（保留燕雲 UID 綁定與歷史資料）",
-      "",
-      "### 燕雲十六聲角色綁定",
       "`/game bind uid:<UID> character_name:<角色名稱>`：提交 UID 綁定申請",
-      "`/game status`：查看自己的 UID 綁定狀態",
-      "`/game pending`：宗主／長老查看待審 UID 綁定",
-      "`/game approve applicant:<待審綁定>`：宗主／長老從 KV 待審清單核准 UID 綁定",
-      "`/game reject applicant:<待審綁定>`：宗主／長老從 KV 待審清單拒絕 UID 綁定",
+      "`/game status`：查看自己的 UID 綁定狀態"
+    );
+  }
+
+  if (rank && canApprove(rank)) {
+    lines.push(
       "",
-      "### 入門審核（宗主／長老）",
-      "`/approve applicant:<待審申請者>`：從待審清單批准加入仙遊者",
-      "`/reject applicant:<待審申請者>`：從待審清單拒絕加入仙遊者",
+      "### 審核指令",
+      "`/approve applicant:<待審申請者>`：批准加入仙遊者",
+      "`/reject applicant:<待審申請者>`：拒絕加入仙遊者",
+      "`/game pending`：查看待審 UID 綁定",
+      "`/game approve applicant:<待審綁定>`：核准 UID 綁定",
+      "`/game reject applicant:<待審綁定>`：拒絕 UID 綁定"
+    );
+  }
+
+  if (rank && canManageRanks(rank)) {
+    lines.push(
+      "",
+      "### 宗主管理指令",
+      "`/member get player:<名冊玩家>`：查看成員詳細資料與燕雲綁定",
+      "`/member set-rank player:<名冊玩家> rank:<弟子或長老> note:<備註>`：調整正式成員身分",
+      "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：將成員移出名冊"
+    );
+  }
+
+  if (rank && canViewMembers(rank)) {
+    lines.push(
       "",
       "### 使用提醒",
-      "成員管理會直接搜尋仙遊者 KV 名冊，不受 Discord 頻道成員選單限制。",
-      "UID 綁定審核會直接搜尋 KV 待審清單，並在執行時重新檢查申請者的正式成員身分。",
-      "請勿輸入密碼、Token、API Key 或其他機密資料。"
-    ].join("\n"),
+      "畫面只列出你目前身分可使用的指令。",
+      "權限以仙遊者即時名冊為準。"
+    );
+  }
+
+  lines.push(
+    "請勿輸入密碼、Token、API Key 或其他機密資料。"
+  );
+
+  return immediateResponse(
+    lines.join("\n"),
     true
   );
 }

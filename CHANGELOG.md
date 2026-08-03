@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.2.13
+
+- `/help` now reads the caller's current KV roster rank before rendering.
+- Disciples see member commands only; elders additionally see review commands.
+- Sect masters additionally see member lookup, rank, and removal commands.
+- Outsiders see only personal help and the application command.
+- Added role-specific `/help` regression tests.
+
 ## 4.2.12
 
 - Replaced Discord member pickers in `/game approve` and `/game reject` with autocomplete sourced from pending KV binding requests.
