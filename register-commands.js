@@ -1,8 +1,11 @@
-const APPLICATION_ID =
-  process.env.DISCORD_APPLICATION_ID;
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-const BOT_TOKEN =
-  process.env.DISCORD_BOT_TOKEN;
+loadLocalEnvironment();
+
+const APPLICATION_ID = clean(process.env.DISCORD_APPLICATION_ID);
+const BOT_TOKEN = clean(process.env.DISCORD_BOT_TOKEN);
+const GUILD_ID = clean(process.env.DISCORD_GUILD_ID);
 
 const COMMANDS = [
   {
@@ -69,41 +72,63 @@ const COMMANDS = [
       }
     ]
   },
+  { name: "members", description: "私密查看宗門名冊" },
+  { name: "sect", description: "私密查看宗門狀態" },
+  { name: "profile", description: "私密查看個人與宗門資料" },
+  { name: "forget", description: "私密清除自己的 AI 記憶" },
   {
-    name: "members",
-    description: "私密查看宗門名冊"
+    name: "game",
+    description: "燕雲十六聲角色綁定與管理",
+    options: [
+      {
+        name: "bind",
+        description: "申請綁定自己的燕雲 UID",
+        type: 1,
+        options: [
+          { name: "uid", description: "遊戲 UID", type: 3, required: true },
+          { name: "character_name", description: "目前角色名稱", type: 3, required: true, max_length: 50 }
+        ]
+      },
+      { name: "status", description: "查看自己的燕雲角色綁定", type: 1 },
+      { name: "pending", description: "查看待審 UID 綁定（宗主／長老）", type: 1 },
+      {
+        name: "approve",
+        description: "核准 UID 綁定（宗主／長老）",
+        type: 1,
+        options: [
+          { name: "user", description: "選擇申請者", type: 6, required: true },
+          { name: "note", description: "審核備註", type: 3, required: false, max_length: 300 }
+        ]
+      },
+      {
+        name: "reject",
+        description: "拒絕 UID 綁定（宗主／長老）",
+        type: 1,
+        options: [
+          { name: "user", description: "選擇申請者", type: 6, required: true },
+          { name: "note", description: "拒絕原因", type: 3, required: false, max_length: 300 }
+        ]
+      }
+    ]
   },
-  {
-    name: "sect",
-    description: "私密查看宗門狀態"
-  },
-  {
-    name: "profile",
-    description: "私密查看個人與宗門資料"
-  },
-  {
-    name: "forget",
-    description: "私密清除自己的 AI 記憶"
-  },
-  {
-    name: "help",
-    description: "私密查看 Bot 使用說明"
-  }
+  { name: "help", description: "私密查看 Bot 使用說明" }
 ];
 
 async function registerCommands() {
   if (!APPLICATION_ID || !BOT_TOKEN) {
-    console.error(
-      "❌ 缺少 DISCORD_APPLICATION_ID 或 DISCORD_BOT_TOKEN"
-    );
+    console.error("❌ 尚未設定本機 Discord 註冊資料。");
+    console.error("請先執行：npm run setup:discord");
+    console.error("完成後再執行：npm run register");
     process.exit(1);
   }
 
-  const guildId = process.env.DISCORD_GUILD_ID;
-
-  const endpoint = guildId
-    ? `https://discord.com/api/v10/applications/${APPLICATION_ID}/guilds/${guildId}/commands`
+  const endpoint = GUILD_ID
+    ? `https://discord.com/api/v10/applications/${APPLICATION_ID}/guilds/${GUILD_ID}/commands`
     : `https://discord.com/api/v10/applications/${APPLICATION_ID}/commands`;
+
+  console.log(GUILD_ID
+    ? `正在註冊伺服器指令（Guild ID: ${GUILD_ID}）...`
+    : "正在註冊全域指令（可能需要一段時間才會顯示）...");
 
   const response = await fetch(endpoint, {
     method: "PUT",
@@ -117,10 +142,8 @@ async function registerCommands() {
   const text = await response.text();
 
   if (!response.ok) {
-    console.error(
-      `❌ Discord Commands 註冊失敗 HTTP ${response.status}`,
-      text
-    );
+    console.error(`❌ Discord Commands 註冊失敗 HTTP ${response.status}`);
+    console.error(text);
     process.exit(1);
   }
 
@@ -130,4 +153,39 @@ async function registerCommands() {
   );
 }
 
-registerCommands();
+function loadLocalEnvironment() {
+  for (const filename of [".dev.vars", ".env"]) {
+    const path = resolve(filename);
+    if (!existsSync(path)) continue;
+
+    const content = readFileSync(path, "utf8");
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) continue;
+
+      const separator = line.indexOf("=");
+      if (separator < 1) continue;
+
+      const key = line.slice(0, separator).trim();
+      let value = line.slice(separator + 1).trim();
+
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+
+      if (!process.env[key]) process.env[key] = value;
+    }
+  }
+}
+
+function clean(value) {
+  return String(value || "").trim();
+}
+
+registerCommands().catch(error => {
+  console.error("❌ 註冊指令時發生未預期錯誤：", error?.message || error);
+  process.exit(1);
+});

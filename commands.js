@@ -39,6 +39,7 @@ import { handleMembers } from "./src/commands/members.js";
 import { handleSect } from "./src/commands/sect.js";
 import { handleProfile } from "./src/commands/profile.js";
 import { handleForget } from "./src/commands/forget.js";
+import { handleGame } from "./src/commands/game.js";
 
 export async function handleCommand(
   interaction,
@@ -73,6 +74,9 @@ export async function handleCommand(
       case "forget":
         return await handleForget(interaction, env);
 
+      case "game":
+        return await handleGame(interaction, env);
+
       case "help":
         return handleHelp(env);
 
@@ -97,15 +101,29 @@ function handleHelp(env) {
     [
       `## ${env.SECT_NAME || "☯【仙遊者】☯"} AI Bot`,
       "",
-      "`/ai question:<問題>`：宗門成員向老祖提問",
-      "`/apply reason:<理由>`：申請入宗",
-      "`/sect`：查看宗門狀態與自己的身分",
-      "`/members`：查看宗門名冊",
-      "`/profile`：查看個人與宗門資料",
-      "`/forget`：清除自己的 AI 記憶",
-      "`/approve user_id:<ID>`：宗主／長老批准申請",
-      "`/reject user_id:<ID>`：宗主／長老拒絕申請",
+      "### 老祖與個人功能",
+      "`/ai question:<問題>`：公開向老祖提問",
+      "`/profile`：私密查看個人與仙遊者資料",
+      "`/forget`：私密清除自己的 AI 對話記憶",
       "",
+      "### 仙遊者成員功能",
+      "`/apply reason:<理由>`：私密申請加入仙遊者",
+      "`/sect`：私密查看仙遊者狀態與自己的身分",
+      "`/members`：私密查看仙遊者名冊",
+      "",
+      "### 燕雲十六聲角色綁定",
+      "`/game bind uid:<UID> character_name:<角色名稱>`：提交 UID 綁定申請",
+      "`/game status`：查看自己的 UID 綁定狀態",
+      "`/game pending`：宗主／長老查看待審 UID 綁定",
+      "`/game approve user:<成員>`：宗主／長老核准 UID 綁定",
+      "`/game reject user:<成員>`：宗主／長老拒絕 UID 綁定",
+      "",
+      "### 入門審核（宗主／長老）",
+      "`/approve user_id:<Discord ID>`：批准加入仙遊者",
+      "`/reject user_id:<Discord ID>`：拒絕加入仙遊者",
+      "",
+      "### 使用提醒",
+      "UID 綁定批准時可直接從 Discord 成員選單選擇申請者，不必手動輸入 ID。",
       "請勿輸入密碼、Token、API Key 或其他機密資料。"
     ].join("\n"),
     true

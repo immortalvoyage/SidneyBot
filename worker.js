@@ -1,5 +1,6 @@
 import { handleCommand } from "./commands.js";
 import { logError } from "./logger.js";
+import { handlePlatformApi } from "./src/platform/games/api.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -7,6 +8,9 @@ const APPLICATION_COMMAND = 2;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    const apiResponse = await handlePlatformApi(request, env, url);
+    if (apiResponse) return apiResponse;
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(
