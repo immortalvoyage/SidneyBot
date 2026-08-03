@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.2.14
+# ☯【仙遊者】☯ Discord AI Bot V4.2.15
 
 完整獨立版，使用：
 
@@ -25,6 +25,7 @@
 - `/forget`
 - `/help`
 - `/game bind|status|pending|approve|reject`
+- `/audit recent|view`
 
 ## 宗門權限
 
@@ -36,6 +37,7 @@
 - `/help` 依即時 KV 身分只顯示呼叫者目前可使用的指令
 - 正式成員可用 `/profile set-name` 修改仙遊者名冊顯示名稱；不會修改 Discord 或遊戲角色名稱
 - `/game approve`、`/game reject` 只顯示 KV 中仍待審且仍是正式成員的申請者
+- `/audit` 只允許宗主私密查看最近操作紀錄與單筆詳情
 
 ## 1. 安裝
 

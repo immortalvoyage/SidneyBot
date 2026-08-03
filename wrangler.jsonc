@@ -5,7 +5,7 @@
   "compatibility_flags": ["nodejs_compat"],
   
   "vars": {
-    "APP_VERSION": "4.2.14",
+    "APP_VERSION": "4.2.15",
     "SECT_NAME": "☯【仙遊者】☯",
     "SECT_MASTER_ID": "1179245490081103994",
 	"APPLICATION_REVIEW_CHANNEL_ID": "請填入入宗審核頻道 ID",

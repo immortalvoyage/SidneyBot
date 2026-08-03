@@ -189,6 +189,31 @@ const COMMANDS = [
       }
     ]
   },
+  {
+    name: "audit",
+    description: "宗主私密查看仙遊者操作紀錄",
+    options: [
+      {
+        name: "recent",
+        description: "查看最近 10 筆操作紀錄",
+        type: 1
+      },
+      {
+        name: "view",
+        description: "查看單筆操作紀錄詳情",
+        type: 1,
+        options: [
+          {
+            name: "record",
+            description: "從最近的 Audit Log 搜尋紀錄",
+            type: 3,
+            required: true,
+            autocomplete: true
+          }
+        ]
+      }
+    ]
+  },
   { name: "help", description: "私密查看 Bot 使用說明" }
 ];
 

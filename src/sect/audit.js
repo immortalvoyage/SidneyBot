@@ -49,3 +49,9 @@ export async function listAudits(env, limit = 20) {
 
   return rows.filter(Boolean);
 }
+
+export async function getAudit(env, auditId) {
+  const id = String(auditId || "").trim();
+  if (!id) return null;
+  return kvGet(env, KV.AUDIT(id), null);
+}

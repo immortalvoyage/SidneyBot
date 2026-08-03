@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.2.15
+
+- Added master-only `/audit recent` and `/audit view record:<record>` commands.
+- Added protected Audit autocomplete sourced from recent KV records.
+- Audit output resolves current member names and preserves removed-member snapshots when available.
+- Audit details expose only approved operational fields and remain ephemeral.
+- Added regression tests for authorization, empty logs, missing records, formatting, and autocomplete privacy.
+
 ## 4.2.14
 
 - Added `/profile view` and `/profile set-name name:<display name>`.

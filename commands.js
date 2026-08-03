@@ -46,6 +46,7 @@ import { handleSect } from "./src/commands/sect.js";
 import { handleProfile } from "./src/commands/profile.js";
 import { handleForget } from "./src/commands/forget.js";
 import { handleGame } from "./src/commands/game.js";
+import { handleAudit } from "./src/commands/audit.js";
 
 export async function handleCommand(
   interaction,
@@ -85,6 +86,9 @@ export async function handleCommand(
 
       case "game":
         return await handleGame(interaction, env);
+
+      case "audit":
+        return await handleAudit(interaction, env);
 
       case "help":
         return await handleHelp(interaction, env);
@@ -156,7 +160,9 @@ async function handleHelp(interaction, env) {
       "### 宗主管理指令",
       "`/member get player:<名冊玩家>`：查看成員詳細資料與燕雲綁定",
       "`/member set-rank player:<名冊玩家> rank:<弟子或長老> note:<備註>`：調整正式成員身分",
-      "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：將成員移出名冊"
+      "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：將成員移出名冊",
+      "`/audit recent`：查看最近 10 筆操作紀錄",
+      "`/audit view record:<紀錄>`：查看單筆操作詳情"
     );
   }
 
