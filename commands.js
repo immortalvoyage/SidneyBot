@@ -36,6 +36,7 @@ import { handleApply } from "./src/commands/apply.js";
 import { handleApprove } from "./src/commands/approve.js";
 import { handleReject } from "./src/commands/reject.js";
 import { handleMembers } from "./src/commands/members.js";
+import { handleMember } from "./src/commands/member.js";
 import { handleSect } from "./src/commands/sect.js";
 import { handleProfile } from "./src/commands/profile.js";
 import { handleForget } from "./src/commands/forget.js";
@@ -54,7 +55,7 @@ export async function handleCommand(
         return handleAsk(interaction, env, ctx);
 
       case "apply":
-        return await handleApply(interaction, env);
+        return await handleApply(interaction, env, ctx);
 
       case "approve":
         return await handleApprove(interaction, env);
@@ -64,6 +65,9 @@ export async function handleCommand(
 
       case "members":
         return await handleMembers(interaction, env);
+
+      case "member":
+        return await handleMember(interaction, env);
 
       case "sect":
         return await handleSect(interaction, env);
@@ -110,6 +114,9 @@ function handleHelp(env) {
       "`/apply reason:<理由>`：私密申請加入仙遊者",
       "`/sect`：私密查看仙遊者狀態與自己的身分",
       "`/members`：私密查看仙遊者名冊",
+      "`/member get player:<名冊玩家>`：宗主查看成員詳細資料與燕雲綁定",
+      "`/member set-rank player:<名冊玩家> rank:<弟子或長老> note:<備註>`：宗主調整正式成員身分",
+      "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：宗主將成員移出名冊（保留燕雲 UID 綁定與歷史資料）",
       "",
       "### 燕雲十六聲角色綁定",
       "`/game bind uid:<UID> character_name:<角色名稱>`：提交 UID 綁定申請",
@@ -119,11 +126,12 @@ function handleHelp(env) {
       "`/game reject user:<成員>`：宗主／長老拒絕 UID 綁定",
       "",
       "### 入門審核（宗主／長老）",
-      "`/approve user_id:<Discord ID>`：批准加入仙遊者",
-      "`/reject user_id:<Discord ID>`：拒絕加入仙遊者",
+      "`/approve applicant:<待審申請者>`：從待審清單批准加入仙遊者",
+      "`/reject applicant:<待審申請者>`：從待審清單拒絕加入仙遊者",
       "",
       "### 使用提醒",
-      "UID 綁定批准時可直接從 Discord 成員選單選擇申請者，不必手動輸入 ID。",
+      "成員管理會直接搜尋仙遊者 KV 名冊，不受 Discord 頻道成員選單限制。",
+      "UID 綁定批准仍從 Discord 成員選單選擇申請者。",
       "請勿輸入密碼、Token、API Key 或其他機密資料。"
     ].join("\n"),
     true

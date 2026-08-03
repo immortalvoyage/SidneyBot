@@ -1,4 +1,7 @@
-import { immediateResponse } from "../../discord.js";
+import {
+  immediateResponse,
+  sendChannelMessage
+} from "../../discord.js";
 import {
   getOptionValue,
   getUser,
@@ -8,8 +11,9 @@ import {
 import { getMember } from "../sect/members.js";
 import { createApplication } from "../sect/applications.js";
 import { writeAudit } from "../sect/audit.js";
+import { logError } from "../../logger.js";
 
-export async function handleApply(interaction, env) {
+export async function handleApply(interaction, env, ctx) {
   const user = getUser(interaction);
   const userId = String(user.id || "");
 
@@ -54,6 +58,13 @@ export async function handleApply(interaction, env) {
     details: { reason }
   });
 
+  const notify = notifyReviewChannel(env, result.application);
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(notify);
+  } else {
+    await notify;
+  }
+
   return immediateResponse(
     [
       "✅ 入宗申請已送出。",
@@ -63,4 +74,25 @@ export async function handleApply(interaction, env) {
     ].join("\n"),
     true
   );
+}
+
+async function notifyReviewChannel(env, application) {
+  try {
+    await sendChannelMessage(
+      env.APPLICATION_REVIEW_CHANNEL_ID,
+      env.DISCORD_BOT_TOKEN,
+      [
+        "📨 **收到新的仙遊者入宗申請**",
+        `申請者：${application.displayName}`,
+        `Discord 帳號：${application.username}`,
+        `Discord ID：${application.userId}`,
+        `申請理由：${application.reason || "未填寫"}`,
+        `申請時間：${application.createdAt}`,
+        "",
+        "請使用 `/approve applicant:<申請者>` 或 `/reject applicant:<申請者>` 審核。"
+      ].join("\n")
+    );
+  } catch (error) {
+    logError("入宗申請通知發送失敗", error);
+  }
 }

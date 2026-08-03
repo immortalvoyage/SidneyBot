@@ -1,9 +1,12 @@
 import { handleCommand } from "./commands.js";
 import { logError } from "./logger.js";
 import { handlePlatformApi } from "./src/platform/games/api.js";
+import { handleMemberAutocomplete } from "./src/commands/member-autocomplete.js";
+import { handleApplicationAutocomplete } from "./src/commands/application-autocomplete.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
+const APPLICATION_COMMAND_AUTOCOMPLETE = 4;
 
 export default {
   async fetch(request, env, ctx) {
@@ -50,6 +53,13 @@ export default {
 
     if (interaction.type === PING) {
       return json({ type: 1 });
+    }
+
+    if (interaction.type === APPLICATION_COMMAND_AUTOCOMPLETE) {
+      if (["approve", "reject"].includes(interaction.data?.name)) {
+        return handleApplicationAutocomplete(interaction, env);
+      }
+      return handleMemberAutocomplete(interaction, env);
     }
 
     if (interaction.type !== APPLICATION_COMMAND) {

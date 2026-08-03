@@ -11,7 +11,7 @@ export async function handleReject(interaction, env) {
   const actor = await resolveActor(env, actorUser);
 
   const targetUserId = String(
-    getOptionValue(interaction, "user_id") || ""
+    getOptionValue(interaction, "applicant") || ""
   ).trim();
 
   const note = String(
@@ -20,7 +20,7 @@ export async function handleReject(interaction, env) {
 
   if (!targetUserId) {
     return immediateResponse(
-      "❌ 請輸入申請者 Discord User ID。",
+      "❌ 請從待審申請選單選擇申請者。",
       true
     );
   }

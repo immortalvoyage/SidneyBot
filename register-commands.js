@@ -39,10 +39,11 @@ const COMMANDS = [
     description: "私密批准入宗申請（宗主／長老）",
     options: [
       {
-        name: "user_id",
-        description: "申請者 Discord User ID",
+        name: "applicant",
+        description: "從待審入宗申請搜尋玩家",
         type: 3,
-        required: true
+        required: true,
+        autocomplete: true
       },
       {
         name: "note",
@@ -58,10 +59,11 @@ const COMMANDS = [
     description: "私密拒絕入宗申請（宗主／長老）",
     options: [
       {
-        name: "user_id",
-        description: "申請者 Discord User ID",
+        name: "applicant",
+        description: "從待審入宗申請搜尋玩家",
         type: 3,
-        required: true
+        required: true,
+        autocomplete: true
       },
       {
         name: "note",
@@ -73,6 +75,57 @@ const COMMANDS = [
     ]
   },
   { name: "members", description: "私密查看宗門名冊" },
+  {
+    name: "member",
+    description: "宗門成員管理（宗主）",
+    options: [
+      {
+        name: "get",
+        description: "查看正式成員詳細資料與燕雲綁定（宗主）",
+        type: 1,
+        options: [
+          { name: "player", description: "從仙遊者 KV 名冊搜尋玩家", type: 3, required: true, autocomplete: true }
+        ]
+      },
+      {
+        name: "set-rank",
+        description: "調整正式成員的身分（宗主）",
+        type: 1,
+        options: [
+          { name: "player", description: "從仙遊者 KV 名冊搜尋玩家", type: 3, required: true, autocomplete: true },
+          {
+            name: "rank",
+            description: "新的宗門身分",
+            type: 3,
+            required: true,
+            choices: [
+              { name: "弟子", value: "disciple" },
+              { name: "長老", value: "elder" }
+            ]
+          },
+          { name: "note", description: "調整原因或備註", type: 3, required: false, max_length: 300 }
+        ]
+      },
+      {
+        name: "remove",
+        description: "將正式成員移出仙遊者名冊（宗主）",
+        type: 1,
+        options: [
+          { name: "player", description: "從仙遊者 KV 名冊搜尋玩家", type: 3, required: true, autocomplete: true },
+          {
+            name: "confirm",
+            description: "確認移除；燕雲 UID 綁定與歷史資料會保留",
+            type: 3,
+            required: true,
+            choices: [
+              { name: "確認移除", value: "REMOVE" }
+            ]
+          },
+          { name: "note", description: "移除原因或備註", type: 3, required: false, max_length: 300 }
+        ]
+      }
+    ]
+  },
   { name: "sect", description: "私密查看宗門狀態" },
   { name: "profile", description: "私密查看個人與宗門資料" },
   { name: "forget", description: "私密清除自己的 AI 記憶" },

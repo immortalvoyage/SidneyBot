@@ -29,6 +29,45 @@ export function deferredResponse(ephemeral = false) {
   });
 }
 
+export function autocompleteResponse(choices = []) {
+  return json({
+    type: 8,
+    data: {
+      choices: Array.isArray(choices) ? choices.slice(0, 25) : []
+    }
+  });
+}
+
+export async function sendChannelMessage(
+  channelId,
+  botToken,
+  content
+) {
+  const normalizedChannelId = String(channelId || "").trim();
+  const normalizedToken = String(botToken || "").trim();
+
+  if (!normalizedChannelId || !normalizedToken) {
+    throw new Error("尚未設定入宗審核頻道或 Discord Bot Token");
+  }
+
+  const response = await discordFetch(
+    `${DISCORD_API}/channels/${normalizedChannelId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${normalizedToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        content: String(content || ""),
+        allowed_mentions: { parse: [] }
+      })
+    }
+  );
+
+  return response.json();
+}
+
 async function discordFetch(url, init, attempts = 3) {
   let lastError;
 

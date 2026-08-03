@@ -4,9 +4,10 @@
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "APP_VERSION": "4.2.3",
+    "APP_VERSION": "4.2.10",
     "SECT_NAME": "☯【仙遊者】☯",
     "SECT_MASTER_ID": "請填入宗主 Discord User ID",
+    "APPLICATION_REVIEW_CHANNEL_ID": "請填入入宗審核頻道 ID",
     "GEMINI_MODEL": "gemini-2.5-flash",
     "GEMINI_FALLBACK_MODELS": "gemini-2.5-flash-lite,gemini-2.0-flash",
     "GEMINI_MAX_OUTPUT_TOKENS": "1600",

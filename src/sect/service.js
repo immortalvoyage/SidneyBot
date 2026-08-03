@@ -5,6 +5,7 @@ import {
 
 import {
   getMember,
+  removeMember,
   upsertMember,
   ensureMaster
 } from "./members.js";
@@ -15,7 +16,11 @@ import {
 } from "./applications.js";
 
 import { writeAudit } from "./audit.js";
-import { canApprove } from "./permissions.js";
+import {
+  canApprove,
+  canManageRanks,
+  isSectMaster
+} from "./permissions.js";
 
 export async function resolveActor(
   env,
@@ -113,4 +118,117 @@ export async function rejectApplicant(
   });
 
   return reviewed;
+}
+
+export async function setMemberRank(
+  env,
+  actor,
+  targetUserId,
+  rank,
+  note = ""
+) {
+  if (!actor || !canManageRanks(actor.rank)) {
+    throw new Error("只有宗主可以調整成員身分");
+  }
+
+  const normalizedTargetId = String(targetUserId || "").trim();
+  if (!normalizedTargetId) {
+    throw new Error("請選擇要調整的成員");
+  }
+
+  if (![RANK.DISCIPLE, RANK.ELDER].includes(rank)) {
+    throw new Error("身分只能設定為弟子或長老");
+  }
+
+  const target = await getMember(env, normalizedTargetId);
+  if (!target) {
+    throw new Error("找不到該仙遊者成員");
+  }
+
+  if (
+    isSectMaster(normalizedTargetId, env) ||
+    target.rank === RANK.MASTER
+  ) {
+    throw new Error("宗主身分受到保護，不能透過此指令修改");
+  }
+
+  if (![RANK.DISCIPLE, RANK.ELDER].includes(target.rank)) {
+    throw new Error("只能調整正式弟子或長老的身分");
+  }
+
+  if (target.rank === rank) {
+    throw new Error("該成員目前已是此身分");
+  }
+
+  const previousRank = target.rank;
+  const updated = await upsertMember(env, {
+    ...target,
+    rank
+  });
+
+  await writeAudit(env, {
+    action: "member.rank_changed",
+    actorId: actor.userId,
+    targetId: normalizedTargetId,
+    details: {
+      previousRank,
+      newRank: rank,
+      note: String(note || "").trim()
+    }
+  });
+
+  return updated;
+}
+
+export async function removeSectMember(
+  env,
+  actor,
+  targetUserId,
+  confirmation,
+  note = ""
+) {
+  if (!actor || !canManageRanks(actor.rank)) {
+    throw new Error("只有宗主可以移除成員");
+  }
+
+  const normalizedTargetId = String(targetUserId || "").trim();
+  if (!normalizedTargetId) {
+    throw new Error("請選擇要移除的成員");
+  }
+
+  if (confirmation !== "REMOVE") {
+    throw new Error("請先選擇「確認移除」再執行");
+  }
+
+  const target = await getMember(env, normalizedTargetId);
+  if (!target) {
+    throw new Error("找不到該仙遊者成員");
+  }
+
+  if (
+    isSectMaster(normalizedTargetId, env) ||
+    target.rank === RANK.MASTER
+  ) {
+    throw new Error("宗主身分受到保護，不能透過此指令移除");
+  }
+
+  if (![RANK.DISCIPLE, RANK.ELDER].includes(target.rank)) {
+    throw new Error("只能移除正式弟子或長老");
+  }
+
+  await removeMember(env, normalizedTargetId);
+
+  await writeAudit(env, {
+    action: "member.removed",
+    actorId: actor.userId,
+    targetId: normalizedTargetId,
+    details: {
+      displayName: target.displayName,
+      previousRank: target.rank,
+      gameBindingPreserved: true,
+      note: String(note || "").trim()
+    }
+  });
+
+  return target;
 }

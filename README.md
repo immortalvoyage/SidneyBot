@@ -128,3 +128,18 @@ npm run register
 - 不要把 Bot Token、Gemini API Key 或 Discord Public Key 寫進 Git。
 - `wrangler.jsonc` 可保存非機密 vars；機密一律使用 `wrangler secret put`。
 - `/approve` 與 `/reject` 使用 Discord User ID，避免 Discord User Option 在不同部署環境的解析差異。
+# 入宗申請審核通知
+
+在 `wrangler.jsonc` 的 `vars` 填入只供宗主／長老查看的 Discord 頻道 ID：
+
+```jsonc
+"APPLICATION_REVIEW_CHANNEL_ID": "你的審核頻道 ID"
+```
+
+Worker 需要 Discord Bot Token 才能主動發送審核通知。Token 必須使用 Cloudflare Secret，不可寫入 GitHub：
+
+```powershell
+npx wrangler secret put DISCORD_BOT_TOKEN
+```
+
+完成後重新部署 Worker 並註冊 Slash Commands。玩家執行 `/apply` 後，審核頻道會收到通知；宗主或長老可在 `/approve applicant:`、`/reject applicant:` 直接搜尋 KV 待審申請。
