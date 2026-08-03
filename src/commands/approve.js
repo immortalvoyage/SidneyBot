@@ -5,6 +5,7 @@ import {
 } from "../../utils.js";
 
 import { resolveActor, approveApplicant } from "../sect/service.js";
+import { syncDiscordMemberRank } from "../sect/discord-roles.js";
 
 export async function handleApprove(interaction, env) {
   const actorUser = getUser(interaction);
@@ -30,7 +31,13 @@ export async function handleApprove(interaction, env) {
       env,
       actor,
       targetUserId,
-      note
+      note,
+      (userId, rank) => syncDiscordMemberRank(
+        env,
+        interaction.guild_id,
+        userId,
+        rank
+      )
     );
 
     return immediateResponse(
@@ -38,7 +45,8 @@ export async function handleApprove(interaction, env) {
         "✅ 已批准入宗。",
         `成員：${member.displayName}`,
         `Discord ID：${member.userId}`,
-        `身分：${member.rank}`
+        `身分：${member.rank}`,
+        "Discord 身分組：已同步為弟子"
       ].join("\n"),
       true
     );

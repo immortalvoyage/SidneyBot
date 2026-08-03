@@ -34,7 +34,8 @@ export async function approveApplicant(
   env,
   actor,
   targetUserId,
-  note = ""
+  note = "",
+  syncRoles = null
 ) {
   if (!actor || !canApprove(actor.rank)) {
     throw new Error("你沒有審核入宗申請的權限");
@@ -50,6 +51,10 @@ export async function approveApplicant(
   if (application.status !== APPLICATION_STATUS.PENDING) {
     throw new Error("該申請已經完成審核");
   }
+
+  const discordRoleSync = syncRoles
+    ? await syncRoles(application.userId, RANK.DISCIPLE)
+    : { status: "not_requested" };
 
   const member = await upsertMember(env, {
     userId: application.userId,
@@ -73,10 +78,10 @@ export async function approveApplicant(
     action: "application.approved",
     actorId: actor.userId,
     targetId: targetUserId,
-    details: { note }
+    details: { note, discordRoleSync }
   });
 
-  return member;
+  return { ...member, discordRoleSync };
 }
 
 export async function rejectApplicant(
@@ -125,7 +130,8 @@ export async function setMemberRank(
   actor,
   targetUserId,
   rank,
-  note = ""
+  note = "",
+  syncRoles = null
 ) {
   if (!actor || !canManageRanks(actor.rank)) {
     throw new Error("只有宗主可以調整成員身分");
@@ -161,6 +167,9 @@ export async function setMemberRank(
   }
 
   const previousRank = target.rank;
+  const discordRoleSync = syncRoles
+    ? await syncRoles(normalizedTargetId, rank)
+    : { status: "not_requested" };
   const updated = await upsertMember(env, {
     ...target,
     rank
@@ -173,11 +182,12 @@ export async function setMemberRank(
     details: {
       previousRank,
       newRank: rank,
-      note: String(note || "").trim()
+      note: String(note || "").trim(),
+      discordRoleSync
     }
   });
 
-  return updated;
+  return { ...updated, discordRoleSync };
 }
 
 export async function removeSectMember(
@@ -185,7 +195,8 @@ export async function removeSectMember(
   actor,
   targetUserId,
   confirmation,
-  note = ""
+  note = "",
+  syncRoles = null
 ) {
   if (!actor || !canManageRanks(actor.rank)) {
     throw new Error("只有宗主可以移除成員");
@@ -216,6 +227,10 @@ export async function removeSectMember(
     throw new Error("只能移除正式弟子或長老");
   }
 
+  const discordRoleSync = syncRoles
+    ? await syncRoles(normalizedTargetId, null)
+    : { status: "not_requested" };
+
   await removeMember(env, normalizedTargetId);
 
   await writeAudit(env, {
@@ -226,9 +241,10 @@ export async function removeSectMember(
       displayName: target.displayName,
       previousRank: target.rank,
       gameBindingPreserved: true,
-      note: String(note || "").trim()
+      note: String(note || "").trim(),
+      discordRoleSync
     }
   });
 
-  return target;
+  return { ...target, discordRoleSync };
 }

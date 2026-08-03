@@ -76,8 +76,22 @@ test("宗主確認後可移除弟子並保留遊戲綁定與 Audit", async () =>
     displayName: "測試成員",
     previousRank: RANK.DISCIPLE,
     gameBindingPreserved: true,
-    note: "長期未參與"
+    note: "長期未參與",
+    discordRoleSync: { status: "not_requested" }
   });
+});
+
+test("撤銷 Discord 身分組失敗時保留 KV 成員", async () => {
+  const env = createEnv();
+  await seedMember(env, { rank: RANK.ELDER });
+  await assert.rejects(
+    removeSectMember(env, actor(), "member-1", "REMOVE", "", async () => {
+      throw new Error("Discord HTTP 403");
+    }),
+    /Discord HTTP 403/
+  );
+  assert.equal((await getMember(env, "member-1")).rank, RANK.ELDER);
+  assert.deepEqual(await listAudits(env), []);
 });
 
 test("長老不能移除成員", async () => {

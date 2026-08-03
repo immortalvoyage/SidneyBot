@@ -68,6 +68,49 @@ export async function sendChannelMessage(
   return response.json();
 }
 
+export async function replaceGuildMemberRoles(
+  guildId,
+  userId,
+  botToken,
+  managedRoleIds,
+  desiredRoleIds
+) {
+  const normalizedGuildId = String(guildId || "").trim();
+  const normalizedUserId = String(userId || "").trim();
+  const normalizedToken = String(botToken || "").trim();
+  const managed = new Set((managedRoleIds || []).map(String).filter(Boolean));
+  const desired = (desiredRoleIds || []).map(String).filter(Boolean);
+
+  if (!normalizedGuildId || !normalizedUserId || !normalizedToken) {
+    throw new Error("缺少 Discord 伺服器、成員或 Bot Token 設定");
+  }
+  if (!managed.size) {
+    throw new Error("尚未設定仙遊者 Discord 身分組 ID");
+  }
+
+  const url = `${DISCORD_API}/guilds/${normalizedGuildId}/members/${normalizedUserId}`;
+  const memberResponse = await discordFetch(url, {
+    headers: { Authorization: `Bot ${normalizedToken}` }
+  });
+  const member = await memberResponse.json();
+  const existing = Array.isArray(member.roles) ? member.roles.map(String) : [];
+  const roles = [...new Set([
+    ...existing.filter(roleId => !managed.has(roleId)),
+    ...desired
+  ])];
+
+  await discordFetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bot ${normalizedToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ roles })
+  });
+
+  return { previousRoles: existing, roles };
+}
+
 async function discordFetch(url, init, attempts = 3) {
   let lastError;
 

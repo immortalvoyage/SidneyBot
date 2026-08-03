@@ -10,6 +10,7 @@ import {
   resolveActor,
   setMemberRank
 } from "../sect/service.js";
+import { syncDiscordMemberRank } from "../sect/discord-roles.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -69,7 +70,13 @@ export async function handleMember(interaction, env) {
         actor,
         subOption(interaction, "player"),
         subOption(interaction, "confirm"),
-        subOption(interaction, "note") || ""
+        subOption(interaction, "note") || "",
+        (userId, rank) => syncDiscordMemberRank(
+          env,
+          interaction.guild_id,
+          userId,
+          rank
+        )
       );
 
       return immediateResponse(
@@ -77,7 +84,8 @@ export async function handleMember(interaction, env) {
           "✅ 已將成員移出仙遊者名冊。",
           `成員：${removed.displayName}`,
           `Discord ID：${removed.userId}`,
-          "燕雲 UID 綁定與歷史資料：已保留"
+          "燕雲 UID 綁定與歷史資料：已保留",
+          "Discord 弟子／長老身分組：已撤銷"
         ].join("\n"),
         true
       );
@@ -88,7 +96,13 @@ export async function handleMember(interaction, env) {
       actor,
       subOption(interaction, "player"),
       subOption(interaction, "rank"),
-      subOption(interaction, "note") || ""
+      subOption(interaction, "note") || "",
+      (userId, rank) => syncDiscordMemberRank(
+        env,
+        interaction.guild_id,
+        userId,
+        rank
+      )
     );
 
     return immediateResponse(
@@ -96,7 +110,8 @@ export async function handleMember(interaction, env) {
         "✅ 已調整成員身分。",
         `成員：${member.displayName}`,
         `Discord ID：${member.userId}`,
-        `新身分：${RANK_LABEL[member.rank] || member.rank}`
+        `新身分：${RANK_LABEL[member.rank] || member.rank}`,
+        "Discord 身分組：已同步"
       ].join("\n"),
       true
     );

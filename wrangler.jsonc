@@ -5,10 +5,12 @@
   "compatibility_flags": ["nodejs_compat"],
   
   "vars": {
-    "APP_VERSION": "4.2.10",
+    "APP_VERSION": "4.2.11",
     "SECT_NAME": "☯【仙遊者】☯",
     "SECT_MASTER_ID": "1179245490081103994",
 	"APPLICATION_REVIEW_CHANNEL_ID": "1533875614568812605",
+	"DISCORD_DISCIPLE_ROLE_ID": "1512261196449841224",
+	"DISCORD_ELDER_ROLE_ID": "1533885265700061298",
 	
     "GEMINI_MODEL": "gemini-3.5-flash-lite",
     "GEMINI_FALLBACK_MODELS": "gemini-2.5-flash,gemini-2.5-flash-lite",

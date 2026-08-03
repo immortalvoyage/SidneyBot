@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.2.11
+
+- Added Discord disciple/elder role synchronization to application approval, rank changes, and member removal.
+- Role updates preserve unrelated Discord roles and replace only the two managed 仙遊者 roles.
+- KV mutations stop when Discord role synchronization fails, preventing stale elder access after removal.
+- Audit records now include Discord role synchronization results.
+- Added lifecycle regression tests for promotion, removal, role preservation, and Discord API failures.
+
 ## 4.2.9
 
 - Replaced Discord user pickers in `/member get`, `/member set-rank`, and `/member remove` with autocomplete sourced from the 仙遊者 KV roster.

@@ -70,8 +70,22 @@ test("宗主可將弟子升為長老並寫入 Audit", async () => {
   assert.deepEqual(audit.details, {
     previousRank: RANK.DISCIPLE,
     newRank: RANK.ELDER,
-    note: "協助管理"
+    note: "協助管理",
+    discordRoleSync: { status: "not_requested" }
   });
+});
+
+test("Discord 身分組同步失敗時不更新 KV 或 Audit", async () => {
+  const env = createEnv();
+  await seedMember(env);
+  await assert.rejects(
+    setMemberRank(env, actor(), "member-1", RANK.ELDER, "", async () => {
+      throw new Error("Discord HTTP 403");
+    }),
+    /Discord HTTP 403/
+  );
+  assert.equal((await getMember(env, "member-1")).rank, RANK.DISCIPLE);
+  assert.deepEqual(await listAudits(env), []);
 });
 
 test("長老不能調整其他成員身分", async () => {

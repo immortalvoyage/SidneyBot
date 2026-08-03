@@ -6,6 +6,9 @@ import { createApplication } from "../src/sect/applications.js";
 import { RANK } from "../src/sect/constants.js";
 import { upsertMember } from "../src/sect/members.js";
 import { sendChannelMessage } from "../discord.js";
+import { approveApplicant } from "../src/sect/service.js";
+import { getApplication } from "../src/sect/applications.js";
+import { getMember } from "../src/sect/members.js";
 
 function createEnv(masterId = "master-1") {
   const values = new Map();
@@ -143,4 +146,28 @@ test("審核頻道通知使用 Bot Token 且停用 mentions", async () => {
     content: "新的申請",
     allowed_mentions: { parse: [] }
   });
+});
+
+test("核准時 Discord 身分組同步失敗不建立成員或完成申請", async () => {
+  const env = createEnv();
+  await createApplication(env, {
+    userId: "applicant-1",
+    username: "new.player",
+    displayName: "新玩家"
+  });
+  const actor = {
+    userId: "master-1",
+    username: "master",
+    displayName: "宗主",
+    rank: RANK.MASTER
+  };
+
+  await assert.rejects(
+    approveApplicant(env, actor, "applicant-1", "", async () => {
+      throw new Error("Discord HTTP 403");
+    }),
+    /Discord HTTP 403/
+  );
+  assert.equal(await getMember(env, "applicant-1"), null);
+  assert.equal((await getApplication(env, "applicant-1")).status, "pending");
 });
