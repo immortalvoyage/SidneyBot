@@ -1,9 +1,9 @@
 {
   "name": "sidney-discord-ai-bot",
-  "version": "4.2.3",
+  "version": "4.2.4",
   "private": true,
   "type": "module",
-  "description": "☯【仙遊者】☯ Discord AI Bot - Cloudflare Workers + Gemini + KV 宗門系統",
+  "description": "Sidney Platform - 仙遊者 Discord 模組（Cloudflare Workers + Gemini + KV）",
   "scripts": {
     "check": "node scripts/check-syntax.js",
     "register": "node register-commands.js",
