@@ -127,7 +127,32 @@ const COMMANDS = [
     ]
   },
   { name: "sect", description: "私密查看宗門狀態" },
-  { name: "profile", description: "私密查看個人與宗門資料" },
+  {
+    name: "profile",
+    description: "私密查看或修改個人宗門資料",
+    options: [
+      {
+        name: "view",
+        description: "私密查看個人與宗門資料",
+        type: 1
+      },
+      {
+        name: "set-name",
+        description: "修改自己在仙遊者名冊顯示的名稱",
+        type: 1,
+        options: [
+          {
+            name: "name",
+            description: "新的仙遊者顯示名稱（1 至 32 個字）",
+            type: 3,
+            required: true,
+            min_length: 1,
+            max_length: 32
+          }
+        ]
+      }
+    ]
+  },
   { name: "forget", description: "私密清除自己的 AI 記憶" },
   {
     name: "game",

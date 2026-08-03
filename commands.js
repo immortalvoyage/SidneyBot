@@ -117,7 +117,7 @@ async function handleHelp(interaction, env) {
     "",
     "### 目前可用指令",
     "`/help`：私密查看你目前能使用的指令",
-    "`/profile`：私密查看個人與仙遊者資料",
+    "`/profile view`：私密查看個人與仙遊者資料",
     "`/forget`：私密清除自己的 AI 對話記憶"
   ];
 
@@ -129,6 +129,7 @@ async function handleHelp(interaction, env) {
 
   if (rank && canUseAI(rank)) {
     lines.push(
+      "`/profile set-name name:<顯示名稱>`：修改自己的仙遊者名冊名稱",
       "`/ai question:<問題>`：公開向老祖提問",
       "`/sect`：私密查看仙遊者狀態與自己的身分",
       "`/members`：私密查看仙遊者名冊",

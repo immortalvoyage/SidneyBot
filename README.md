@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.2.13
+# ☯【仙遊者】☯ Discord AI Bot V4.2.14
 
 完整獨立版，使用：
 
@@ -20,19 +20,21 @@
 - `/member remove player:<名冊玩家> confirm:<確認移除>`
 - `/members`
 - `/sect`
-- `/profile`
+- `/profile view`
+- `/profile set-name name:<顯示名稱>`
 - `/forget`
 - `/help`
 - `/game bind|status|pending|approve|reject`
 
 ## 宗門權限
 
-- 外人：可使用 `/help`、`/profile`、`/forget`、`/apply`
+- 外人：可使用 `/help`、`/profile view`、`/forget`、`/apply`
 - 弟子：包含個人功能，可使用 `/ai`、`/sect`、`/members` 與自己的遊戲綁定
 - 長老：包含弟子權限，可審核入宗與遊戲綁定申請
 - 宗主：完整權限，可查詢、升降階及移除成員；`SECT_MASTER_ID` 第一次互動時自動建立宗主名冊
 - 指令授權以即時 KV 名冊為準，不信任殘留的 Discord 身分組
 - `/help` 依即時 KV 身分只顯示呼叫者目前可使用的指令
+- 正式成員可用 `/profile set-name` 修改仙遊者名冊顯示名稱；不會修改 Discord 或遊戲角色名稱
 - `/game approve`、`/game reject` 只顯示 KV 中仍待審且仍是正式成員的申請者
 
 ## 1. 安裝
@@ -117,8 +119,9 @@ npm run register
 4. 宗主執行 `/approve applicant:<從待審選單選擇>`
 5. 申請者執行 `/ai`
 6. 執行 `/members`
-7. 執行 `/profile`
-8. 執行 `/forget`
+7. 執行 `/profile view`
+8. 執行 `/profile set-name name:凜冬皓月`，再用 `/sect` 確認名稱
+9. 執行 `/forget`
 
 ## KV Key 結構
 

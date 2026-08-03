@@ -44,7 +44,7 @@ test("外人只看到入宗與個人指令", async () => {
   const content = await helpContent(createEnv(), "outsider-1");
   assert.match(content, /你的身分：尚未入宗/);
   assert.match(content, /\/apply/);
-  assert.doesNotMatch(content, /\/ai question|\/members|\/approve|\/member get|\/game bind/);
+  assert.doesNotMatch(content, /\/profile set-name|\/ai question|\/members|\/approve|\/member get|\/game bind/);
 });
 
 test("弟子只看到正式成員功能，不看到審核與管理指令", async () => {
@@ -56,7 +56,7 @@ test("弟子只看到正式成員功能，不看到審核與管理指令", async
   });
   const content = await helpContent(env, "disciple-1");
   assert.match(content, /你的身分：弟子/);
-  assert.match(content, /\/ai question|\/members|\/game bind/);
+  assert.match(content, /\/profile set-name|\/ai question|\/members|\/game bind/);
   assert.doesNotMatch(content, /\/apply|\/approve|\/reject|\/game pending|\/member get/);
 });
 
@@ -80,4 +80,3 @@ test("設定中的宗主自動建檔並看到完整管理功能", async () => {
   assert.match(content, /\/approve|\/game pending|\/member get|\/member set-rank|\/member remove/);
   assert.doesNotMatch(content, /\/apply/);
 });
-

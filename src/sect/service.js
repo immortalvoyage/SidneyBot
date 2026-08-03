@@ -30,6 +30,65 @@ export async function resolveActor(
   return getMember(env, user.id);
 }
 
+export function normalizeMemberDisplayName(value) {
+  const name = String(value || "")
+    .normalize("NFC")
+    .trim()
+    .replace(/[ \t]+/g, " ");
+
+  if (!name) {
+    throw new Error("顯示名稱不可為空白");
+  }
+
+  if (Array.from(name).length > 32) {
+    throw new Error("顯示名稱不可超過 32 個字");
+  }
+
+  if (/\p{C}/u.test(name)) {
+    throw new Error("顯示名稱不可包含控制字元");
+  }
+
+  if (/@everyone|@here|<[@#][!&]?\d+>/i.test(name)) {
+    throw new Error("顯示名稱不可包含 Discord 提及標記");
+  }
+
+  return name;
+}
+
+export async function setOwnDisplayName(env, actor, value) {
+  if (!actor?.userId) {
+    throw new Error("只有仙遊者正式成員可以修改顯示名稱");
+  }
+
+  const current = await getMember(env, actor.userId);
+  if (!current || ![RANK.DISCIPLE, RANK.ELDER, RANK.MASTER].includes(current.rank)) {
+    throw new Error("只有仙遊者正式成員可以修改顯示名稱");
+  }
+
+  const displayName = normalizeMemberDisplayName(value);
+  if (current.displayName === displayName) {
+    throw new Error("新的顯示名稱與目前名稱相同");
+  }
+
+  const previousDisplayName = current.displayName || current.username || "未知仙友";
+  const updated = await upsertMember(env, {
+    ...current,
+    displayName
+  });
+
+  await writeAudit(env, {
+    action: "member.display_name_changed",
+    actorId: current.userId,
+    targetId: current.userId,
+    details: {
+      previousDisplayName,
+      newDisplayName: displayName
+    }
+  });
+
+  return updated;
+}
+
 export async function approveApplicant(
   env,
   actor,

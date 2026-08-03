@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.2.14
+
+- Added `/profile view` and `/profile set-name name:<display name>`.
+- Formal members can update only their own 仙遊者 roster display name.
+- Kept roster, Discord, and game character names as independent identities.
+- Added display-name validation and `member.display_name_changed` Audit records.
+- Added regression tests for authorization, persistence, validation, and Audit logging.
+
 ## 4.2.13
 
 - `/help` now reads the caller's current KV roster rank before rendering.
