@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.2.16
+# ☯【仙遊者】☯ Discord AI Bot V4.2.17
 
 完整獨立版，使用：
 
@@ -18,7 +18,7 @@
 - `/member get player:<名冊玩家>`
 - `/member set-rank player:<名冊玩家> rank:<弟子或長老>`
 - `/member remove player:<名冊玩家> confirm:<確認移除>`
-- `/members`
+- `/members page:<頁碼>`
 - `/sect`
 - `/profile view`
 - `/profile set-name name:<顯示名稱>`
@@ -40,6 +40,7 @@
 - `/game approve`、`/game reject` 只顯示 KV 中仍待審且仍是正式成員的申請者
 - `/audit` 只允許宗主私密查看最近操作紀錄與單筆詳情
 - `/system check` 只讀檢查名冊、申請、Audit 與待審遊戲綁定索引；`/system repair` 經確認後只重建索引，不刪除實體資料
+- `/members` 每頁最多顯示 15 人，避免名冊成長後超過 Discord 訊息限制
 
 ## 1. 安裝
 

@@ -74,7 +74,19 @@ const COMMANDS = [
       }
     ]
   },
-  { name: "members", description: "私密查看宗門名冊" },
+  {
+    name: "members",
+    description: "私密分頁查看宗門名冊",
+    options: [
+      {
+        name: "page",
+        description: "要查看的頁碼（預設第 1 頁）",
+        type: 4,
+        required: false,
+        min_value: 1
+      }
+    ]
+  },
   {
     name: "member",
     description: "宗門成員管理（宗主）",

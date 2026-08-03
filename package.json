@@ -1,6 +1,6 @@
 {
   "name": "sidney-discord-ai-bot",
-  "version": "4.2.16",
+  "version": "4.2.17",
   "private": true,
   "type": "module",
   "description": "Sidney Platform - 仙遊者 Discord 模組（Cloudflare Workers + Gemini + KV）",

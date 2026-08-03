@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.2.17
+
+- `/members` 新增可選的 `page` 頁碼參數。
+- 名冊固定每頁顯示 15 人，並顯示目前頁數、總頁數與總人數。
+- 超出範圍的頁碼會安全拒絕，不會回傳空白名冊。
+- 名冊回覆維持私密，既有身分權限不變。
+
 ## 4.2.16
 
 - Added master-only `/system check` and `/system repair` commands.

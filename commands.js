@@ -140,7 +140,7 @@ async function handleHelp(interaction, env) {
       "`/profile set-name name:<顯示名稱>`：修改自己的仙遊者名冊名稱",
       "`/ai question:<問題>`：公開向老祖提問",
       "`/sect`：私密查看仙遊者狀態與自己的身分",
-      "`/members`：私密查看仙遊者名冊",
+      "`/members page:<頁碼>`：私密分頁查看仙遊者名冊",
       "`/game bind uid:<UID> character_name:<角色名稱>`：提交 UID 綁定申請",
       "`/game status`：查看自己的 UID 綁定狀態"
     );
