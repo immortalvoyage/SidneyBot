@@ -6,6 +6,7 @@
   "description": "Sidney Platform - 仙遊者 Discord 模組（Cloudflare Workers + Gemini + KV）",
   "scripts": {
     "check": "node scripts/check-syntax.js",
+    "test": "node --test tests/*.test.js",
     "register": "node register-commands.js",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",

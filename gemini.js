@@ -93,19 +93,67 @@ function getPositiveInteger(
 /**
  * 建立使用模型清單。
  */
-function getModelList() {
-  const models = [
-    CONFIG?.GEMINI?.MODEL,
-    CONFIG?.GEMINI?.FALLBACK_MODEL
-  ]
+function normalizeModelList(value) {
+  const values = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(",")
+      : [];
+
+  return values
     .map((model) =>
       typeof model === "string"
         ? model.trim()
         : ""
     )
     .filter(Boolean);
+}
 
-  return [...new Set(models)];
+/**
+ * 統一解析 Gemini 執行設定。
+ *
+ * Cloudflare env 優先於 config.js；未設定 env 時保留原本預設值。
+ */
+export function resolveGeminiSettings(env = {}) {
+  const primaryModel =
+    typeof env.GEMINI_MODEL === "string" && env.GEMINI_MODEL.trim()
+      ? env.GEMINI_MODEL.trim()
+      : CONFIG?.GEMINI?.MODEL;
+
+  const fallbackSource =
+    typeof env.GEMINI_FALLBACK_MODELS === "string"
+      ? env.GEMINI_FALLBACK_MODELS
+      : CONFIG?.GEMINI?.FALLBACK_MODELS;
+
+  const models = [
+    primaryModel,
+    ...normalizeModelList(fallbackSource)
+  ].filter(Boolean);
+
+  return {
+    models: [...new Set(models)],
+    maxRetries: getPositiveInteger(
+      env.GEMINI_MAX_RETRIES,
+      getPositiveInteger(
+        CONFIG?.GEMINI?.MAX_RETRIES,
+        DEFAULT_MAX_RETRIES
+      )
+    ),
+    timeoutMs: getPositiveInteger(
+      env.GEMINI_TIMEOUT_MS,
+      getPositiveInteger(
+        CONFIG?.GEMINI?.REQUEST_TIMEOUT_MS,
+        DEFAULT_TIMEOUT_MS
+      )
+    ),
+    maxOutputTokens: getPositiveInteger(
+      env.GEMINI_MAX_OUTPUT_TOKENS,
+      getPositiveInteger(
+        CONFIG?.GEMINI?.MAX_OUTPUT_TOKENS,
+        1200
+      )
+    )
+  };
 }
 
 /**
@@ -162,11 +210,7 @@ async function fetchWithTimeout(
 }
 
 /**
- * 將舊版 Profile 暫時轉換為
- * Prompt Builder 可理解的宗門身份。
- *
- * 等宗門權限接入後，
- * 這裡會改成使用真正的 member 資料。
+ * 舊呼叫端未提供 member 時的相容處理。
  */
 function buildTemporaryMember(profile) {
   const nickname =
@@ -284,6 +328,7 @@ async function requestModel({
   question,
   history,
   profile,
+  member,
   env,
   maxRetries,
   timeoutMs,
@@ -292,7 +337,7 @@ async function requestModel({
   const systemPrompt =
     buildLaozuSystemPrompt({
       member:
-        buildTemporaryMember(profile),
+        member || buildTemporaryMember(profile),
 
       profile
     });
@@ -619,14 +664,16 @@ async function requestModel({
  *   question,
  *   env,
  *   history,
- *   profile
+ *   profile,
+ *   member
  * )
  */
 export async function askGemini(
   question,
   env,
   history = [],
-  profile = {}
+  profile = {},
+  member = null
 ) {
   if (!env?.GEMINI_API_KEY) {
     throw new GeminiApiError(
@@ -652,8 +699,12 @@ export async function askGemini(
     );
   }
 
-  const models =
-    getModelList();
+  const {
+    models,
+    maxRetries,
+    timeoutMs,
+    maxOutputTokens
+  } = resolveGeminiSettings(env);
 
   if (models.length === 0) {
     throw new GeminiApiError(
@@ -664,27 +715,6 @@ export async function askGemini(
       }
     );
   }
-
-  const maxRetries =
-    getPositiveInteger(
-      CONFIG?.GEMINI
-        ?.MAX_RETRIES,
-      DEFAULT_MAX_RETRIES
-    );
-
-  const timeoutMs =
-    getPositiveInteger(
-      CONFIG?.GEMINI
-        ?.REQUEST_TIMEOUT_MS,
-      DEFAULT_TIMEOUT_MS
-    );
-
-  const maxOutputTokens =
-    getPositiveInteger(
-      CONFIG?.GEMINI
-        ?.MAX_OUTPUT_TOKENS,
-      1200
-    );
 
   let lastError = null;
 
@@ -702,6 +732,7 @@ export async function askGemini(
 
           history,
           profile,
+          member,
           env,
           maxRetries,
           timeoutMs,
