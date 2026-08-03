@@ -97,7 +97,7 @@ function handleHelp(env) {
     [
       `## ${env.SECT_NAME || "☯【仙遊者】☯"} AI Bot`,
       "",
-      "`/ai question:<問題>`：宗門成員向仙遊靈提問",
+      "`/ai question:<問題>`：宗門成員向老祖提問",
       "`/apply reason:<理由>`：申請入宗",
       "`/sect`：查看宗門狀態與自己的身分",
       "`/members`：查看宗門名冊",

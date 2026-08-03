@@ -7,7 +7,7 @@ const BOT_TOKEN =
 const COMMANDS = [
   {
     name: "ai",
-    description: "公開向仙遊靈提問",
+    description: "公開向老祖提問",
     options: [
       {
         name: "question",
