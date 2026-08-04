@@ -33,6 +33,7 @@ test("解析宗主新增弟子與長老的自然語言", () => {
   assert.deepEqual(
     parseMasterEnrollmentDialogue("將 <@123456789012345678> 加入仙遊者"),
     {
+      action: "enroll",
       targetUserId: "123456789012345678",
       rank: RANK.DISCIPLE,
       note: "將 <@123456789012345678> 加入仙遊者"
@@ -41,6 +42,18 @@ test("解析宗主新增弟子與長老的自然語言", () => {
   assert.equal(
     parseMasterEnrollmentDialogue("將 <@!123456789012345678> 加入仙遊者成為長老").rank,
     RANK.ELDER
+  );
+});
+
+test("解析宗主移除成員的自然語言", () => {
+  assert.deepEqual(
+    parseMasterEnrollmentDialogue("將 <@123456789012345678> 移出仙遊者"),
+    {
+      action: "remove",
+      targetUserId: "123456789012345678",
+      rank: RANK.DISCIPLE,
+      note: "將 <@123456789012345678> 移出仙遊者"
+    }
   );
 });
 

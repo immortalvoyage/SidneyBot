@@ -68,6 +68,41 @@ export async function sendChannelMessage(
   return response.json();
 }
 
+export async function sendUserDirectMessage(userId, botToken, content) {
+  const normalizedUserId = String(userId || "").trim();
+  const normalizedToken = String(botToken || "").trim();
+  if (!normalizedUserId || !normalizedToken) {
+    throw new Error("缺少 Discord 玩家 ID 或 Bot Token");
+  }
+
+  const channelResponse = await discordFetch(`${DISCORD_API}/users/@me/channels`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bot ${normalizedToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ recipient_id: normalizedUserId })
+  });
+  const channel = await channelResponse.json();
+  if (!channel?.id) throw new Error("Discord 未回傳私人訊息頻道");
+
+  const messageResponse = await discordFetch(
+    `${DISCORD_API}/channels/${channel.id}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${normalizedToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        content: String(content || ""),
+        allowed_mentions: { parse: [] }
+      })
+    }
+  );
+  return messageResponse.json();
+}
+
 export async function replaceGuildMemberRoles(
   guildId,
   userId,

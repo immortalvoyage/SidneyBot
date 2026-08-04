@@ -10,6 +10,7 @@ import {
   rejectGameBinding,
   requestGameBinding
 } from "../platform/games/service.js";
+import { notifyMember, notificationSummary } from "../sect/notifications.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -95,8 +96,18 @@ export async function handleGame(interaction, env) {
         reviewerId: userId,
         note: subOption(interaction, "note") || ""
       });
+      const notification = await notifyMember(env, {
+        userId: targetUserId,
+        actorId: userId,
+        event: "game_binding.approved",
+        content: [
+          "✅ 你的《燕雲十六聲》UID 綁定已核准。",
+          `UID：${account.uid}`,
+          `角色名稱：${account.currentCharacterName}`
+        ].join("\n")
+      });
       return immediateResponse(
-        `✅ 已核准 UID ${account.uid} 綁定至 Discord ID ${account.userId}。`,
+        `✅ 已核准 UID ${account.uid} 綁定至 Discord ID ${account.userId}。\n${notificationSummary(notification)}`,
         true
       );
     }
@@ -107,8 +118,20 @@ export async function handleGame(interaction, env) {
         reviewerId: userId,
         note: subOption(interaction, "note") || ""
       });
+      const note = subOption(interaction, "note") || "未提供";
+      const notification = await notifyMember(env, {
+        userId: targetUserId,
+        actorId: userId,
+        event: "game_binding.rejected",
+        content: [
+          "❌ 你的《燕雲十六聲》UID 綁定申請未獲核准。",
+          `UID：${record.uid}`,
+          `審核備註：${note}`,
+          "請確認 UID 與角色名稱後重新提交，或聯絡宗主。"
+        ].join("\n")
+      });
       return immediateResponse(
-        `✅ 已拒絕 ${record.discordName || record.userId} 的 UID 綁定申請。`,
+        `✅ 已拒絕 ${record.discordName || record.userId} 的 UID 綁定申請。\n${notificationSummary(notification)}`,
         true
       );
     }

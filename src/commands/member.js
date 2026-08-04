@@ -12,6 +12,7 @@ import {
 } from "../sect/service.js";
 import { syncDiscordMemberRank } from "../sect/discord-roles.js";
 import { runDeferredCommand } from "./deferred.js";
+import { notifyMember, notificationSummary } from "../sect/notifications.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -80,13 +81,25 @@ export async function handleMember(interaction, env, ctx) {
             rank
           )
         );
+        const notification = await notifyMember(env, {
+          userId: removed.userId,
+          actorId: actor.userId,
+          event: "member.removed",
+          content: [
+            `${removed.displayName}，你已被移出仙遊者名冊。`,
+            "Discord 弟子／長老身分組已撤銷。",
+            "既有燕雲 UID 綁定與歷史資料目前保留。",
+            "如有疑問，請直接聯絡宗主。"
+          ].join("\n")
+        });
 
         return [
           "✅ 已將成員移出仙遊者名冊。",
           `成員：${removed.displayName}`,
           `Discord ID：${removed.userId}`,
           "燕雲 UID 綁定與歷史資料：已保留",
-          "Discord 弟子／長老身分組：已撤銷"
+          "Discord 弟子／長老身分組：已撤銷",
+          notificationSummary(notification)
         ].join("\n");
       });
     }
