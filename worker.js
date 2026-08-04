@@ -7,10 +7,12 @@ import { handleGameBindingAutocomplete } from "./src/commands/game-binding-autoc
 import { handleAuditAutocomplete } from "./src/commands/audit-autocomplete.js";
 import { handleRedeemCodeEvent } from "./src/integrations/redeem-codes.js";
 import { normalizeChineseInteraction } from "./src/commands/localization.js";
+import { handleButton } from "./src/interactions/buttons.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
 const APPLICATION_COMMAND_AUTOCOMPLETE = 4;
+const MESSAGE_COMPONENT = 3;
 
 export default {
   async fetch(request, env, ctx) {
@@ -25,7 +27,7 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(
-        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.6"} is running.`
+        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.7"} is running.`
       );
     }
 
@@ -64,6 +66,10 @@ export default {
     }
 
     interaction = normalizeChineseInteraction(interaction);
+
+    if (interaction.type === MESSAGE_COMPONENT) {
+      return handleButton(interaction, env);
+    }
 
     if (interaction.type === APPLICATION_COMMAND_AUTOCOMPLETE) {
       if (interaction.data?.name === "review") {

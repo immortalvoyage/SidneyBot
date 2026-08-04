@@ -38,10 +38,21 @@ export function autocompleteResponse(choices = []) {
   });
 }
 
+export function updateMessageResponse(data = {}) {
+  return json({
+    type: 7,
+    data: {
+      ...data,
+      allowed_mentions: { parse: [] }
+    }
+  });
+}
+
 export async function sendChannelMessage(
   channelId,
   botToken,
-  content
+  content,
+  options = {}
 ) {
   const normalizedChannelId = String(channelId || "").trim();
   const normalizedToken = String(botToken || "").trim();
@@ -60,6 +71,7 @@ export async function sendChannelMessage(
       },
       body: JSON.stringify({
         content: String(content || ""),
+        components: Array.isArray(options.components) ? options.components : [],
         allowed_mentions: { parse: [] }
       })
     }

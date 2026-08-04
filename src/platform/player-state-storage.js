@@ -18,6 +18,13 @@ export async function getPlayerState(env, userId) {
   return stored ? normalizePlayerState(stored) : null;
 }
 
+export async function savePlayerState(env, state) {
+  const normalized = normalizePlayerState(state);
+  if (!normalized.userId) throw new Error("playerState userId 不可為空");
+  await kvPut(env, playerStateKey(normalized.userId), normalized);
+  return normalized;
+}
+
 export async function ensurePlayerState(env, member) {
   const userId = String(member?.userId || "").trim();
   if (!userId) throw new Error("member.userId 不可為空");

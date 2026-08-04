@@ -144,6 +144,7 @@ test("審核頻道通知使用 Bot Token 且停用 mentions", async () => {
   assert.equal(captured.init.headers.Authorization, "Bot token-1");
   assert.deepEqual(JSON.parse(captured.init.body), {
     content: "新的申請",
+    components: [],
     allowed_mentions: { parse: [] }
   });
 });

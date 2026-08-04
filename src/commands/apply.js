@@ -12,6 +12,7 @@ import { getMember } from "../sect/members.js";
 import { createApplication } from "../sect/applications.js";
 import { writeAudit } from "../sect/audit.js";
 import { logError } from "../../logger.js";
+import { applicationReviewComponents } from "../interactions/components.js";
 
 export async function handleApply(interaction, env, ctx) {
   const user = getUser(interaction);
@@ -89,8 +90,9 @@ async function notifyReviewChannel(env, application) {
         `申請理由：${application.reason || "未填寫"}`,
         `申請時間：${application.createdAt}`,
         "",
-        "請使用 `/review applicant:<申請者> decision:<核准／拒絕>` 審核。"
-      ].join("\n")
+        "請點擊下方按鈕審核；`/review` 仍可作為備援。"
+      ].join("\n"),
+      { components: applicationReviewComponents(application.userId) }
     );
   } catch (error) {
     logError("入宗申請通知發送失敗", error);

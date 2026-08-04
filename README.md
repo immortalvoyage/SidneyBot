@@ -174,3 +174,8 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 - `/member remove`：撤銷弟子與長老，保留玩家其他身分組
 - Discord 同步失敗時不會繼續修改 KV，指令會回報錯誤
 - 耗時管理操作已採 Discord deferred 回覆；本版本沒有修改 Slash Command 結構，從 V4.2.17 更新時不必重新註冊
+# SidneyBot v4.3.7 互動按鈕模組
+
+本版新增老祖每日請安面板與入宗審核按鈕。玩家每日只需點擊「向老祖請安」；宗主或長老可在指定頻道執行一次 `/panel` 或 `/面板` 建立長期面板。新入宗申請會自動送至既有審核頻道並附上「同意入宗」與「拒絕申請」按鈕，原 `/review`／`/審核` 保留作為備援。
+
+部署本版後必須先執行 `npm run register` 註冊新增的 `/panel`／`/面板`，再執行 `npm run deploy`。不需新增或修改任何 Secret。

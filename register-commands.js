@@ -66,6 +66,10 @@ const ENGLISH_COMMANDS = [
     ]
   },
   {
+    name: "panel",
+    description: "在目前頻道建立老祖互動面板（宗主／長老）"
+  },
+  {
     name: "members",
     description: "私密分頁查看宗門名冊",
     options: [

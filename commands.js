@@ -39,6 +39,7 @@ import { RANK_LABEL } from "./src/sect/constants.js";
 
 import { handleApply } from "./src/commands/apply.js";
 import { handleReview } from "./src/commands/review.js";
+import { handlePanel } from "./src/commands/panel.js";
 import { handleMembers } from "./src/commands/members.js";
 import { handleMember } from "./src/commands/member.js";
 import { handleSect } from "./src/commands/sect.js";
@@ -69,6 +70,8 @@ export async function handleCommand(
 
       case "review":
         return await handleReview(interaction, env, ctx);
+      case "panel":
+        return await handlePanel(interaction, env);
 
       case "members":
         return await handleMembers(interaction, env);
@@ -152,6 +155,7 @@ async function handleHelp(interaction, env) {
       "",
       "### 審核指令",
       "`/review applicant:<待審申請者> decision:<核准／拒絕>`：審核加入仙遊者",
+      "`/panel`：在目前頻道建立每日請安面板（宗主／長老）",
       "`/game pending`：查看待審 UID 綁定",
       "`/game review applicant:<待審綁定> decision:<核准／拒絕>`：審核 UID 綁定"
     );

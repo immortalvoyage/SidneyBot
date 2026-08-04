@@ -2,6 +2,7 @@ const ENGLISH_TO_CHINESE = Object.freeze({
   ai: "詢問",
   apply: "申請",
   review: "審核",
+  panel: "面板",
   members: "名冊",
   member: "成員",
   sect: "仙遊者",
