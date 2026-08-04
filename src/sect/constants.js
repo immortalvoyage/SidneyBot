@@ -1,6 +1,7 @@
 export const RANK = Object.freeze({
   OUTSIDER: "outsider",
   PENDING: "pending",
+  RESIDENT: "resident",
   DISCIPLE: "disciple",
   ELDER: "elder",
   MASTER: "master"
@@ -25,7 +26,8 @@ export const KV = Object.freeze({
 export const RANK_LABEL = Object.freeze({
   [RANK.OUTSIDER]: "外人",
   [RANK.PENDING]: "待審核",
-  [RANK.DISCIPLE]: "弟子",
+  [RANK.RESIDENT]: "領民",
+  [RANK.DISCIPLE]: "門徒",
   [RANK.ELDER]: "長老",
   [RANK.MASTER]: "宗主"
 });

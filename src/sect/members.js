@@ -68,7 +68,7 @@ export async function upsertMember(env, member) {
     rank:
       member.rank ||
       current?.rank ||
-      RANK.DISCIPLE,
+      RANK.RESIDENT,
     joinedAt:
       member.joinedAt ||
       current?.joinedAt ||
@@ -105,8 +105,9 @@ export async function listMembers(env) {
     [RANK.MASTER]: 0,
     [RANK.ELDER]: 1,
     [RANK.DISCIPLE]: 2,
-    [RANK.PENDING]: 3,
-    [RANK.OUTSIDER]: 4
+    [RANK.RESIDENT]: 3,
+    [RANK.PENDING]: 4,
+    [RANK.OUTSIDER]: 5
   };
 
   return members

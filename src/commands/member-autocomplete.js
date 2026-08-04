@@ -46,7 +46,7 @@ export async function handleMemberAutocomplete(interaction, env) {
     const members = await listMembers(env);
 
     const choices = members
-      .filter(member => [RANK.MASTER, RANK.ELDER, RANK.DISCIPLE].includes(member.rank))
+      .filter(member => [RANK.MASTER, RANK.ELDER, RANK.DISCIPLE, RANK.RESIDENT].includes(member.rank))
       .filter(member => {
         if (subcommand === "get") return true;
         return member.rank !== RANK.MASTER && !isSectMaster(member.userId, env);

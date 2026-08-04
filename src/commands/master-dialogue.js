@@ -22,7 +22,7 @@ export function parseMasterEnrollmentDialogue(question) {
   return {
     action,
     targetUserId: mention[1],
-    rank: ELDER_WORDS.test(text) ? RANK.ELDER : RANK.DISCIPLE,
+    rank: ELDER_WORDS.test(text) ? RANK.ELDER : RANK.RESIDENT,
     note: text
   };
 }
@@ -48,7 +48,7 @@ export async function processMasterEnrollmentDialogue(interaction, instruction, 
         event: "member.removed",
         content: [
           `${removed.displayName}，你已被移出仙遊者名冊。`,
-          "Discord 弟子／長老身分組已撤銷。",
+          "Discord 領民／門徒／長老身分組已撤銷。",
           "既有燕雲 UID 綁定與歷史資料目前保留。",
           "如有疑問，請直接聯絡宗主。"
         ].join("\n")

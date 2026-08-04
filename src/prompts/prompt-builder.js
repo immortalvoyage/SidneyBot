@@ -27,25 +27,26 @@ function buildMemberContext(member) {
 【目前說話者】
 
 此人的宗門身份尚未確認。
-不得自行將其視為正式弟子。
+不得自行將其視為正式成員。
 `;
   }
 
   const nickname =
     normalizeText(member.nickname, 50) ||
     normalizeText(member.displayName, 100) ||
-    "弟子";
+    "仙友";
 
   const displayName =
     normalizeText(member.displayName, 100) ||
-    "未記名弟子";
+    "未記名仙友";
 
-  const rank = normalizeText(member.rank, 30) || "disciple";
+  const rank = normalizeText(member.rank, 30) || "resident";
 
   const rankNames = {
     master: "宗主",
     elder: "長老",
-    disciple: "正式弟子",
+    disciple: "門徒",
+    resident: "領民",
     pending: "待審核者",
     outsider: "陌生人"
   };
@@ -69,7 +70,7 @@ Discord 名稱：${displayName}
 function buildProfileContext(profile) {
   if (!profile) {
     return `
-【弟子私人記憶】
+【仙友私人記憶】
 
 目前沒有可用的私人記憶。
 不要假裝記得尚未提供的事情。
@@ -95,14 +96,14 @@ function buildProfileContext(profile) {
   );
 
   return `
-【弟子私人記憶】
+【仙友私人記憶】
 
 偏好稱呼：${preferredNickname || "未設定"}
 常用武器：${mainWeapon || "未設定"}
 目前目標：${goals.length > 0 ? goals.join("、") : "未設定"}
 偏好回答方式：${answerStyle || "未設定"}
 
-只可將這些資料用於協助目前這名弟子。
+只可將這些資料用於協助目前這名仙友。
 不得把私人記憶當作宗門公開資料。
 `;
 }
@@ -127,7 +128,7 @@ function buildHistoryContext(historySummary) {
 ${summary}
 
 摘要只用於維持對話連貫。
-若摘要與弟子目前說法衝突，應以目前訊息為準。
+若摘要與仙友目前說法衝突，應以目前訊息為準。
 `;
 }
 

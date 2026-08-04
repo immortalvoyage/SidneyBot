@@ -106,7 +106,8 @@ const ENGLISH_COMMANDS = [
             type: 3,
             required: true,
             choices: [
-              { name: "弟子", value: "disciple" },
+              { name: "領民", value: "resident" },
+              { name: "門徒", value: "disciple" },
               { name: "長老", value: "elder" }
             ]
           },

@@ -7,6 +7,7 @@ export function isSectMaster(userId, env) {
 
 export function canUseAI(rank) {
   return [
+    RANK.RESIDENT,
     RANK.DISCIPLE,
     RANK.ELDER,
     RANK.MASTER
@@ -26,6 +27,7 @@ export function canManageRanks(rank) {
 
 export function canViewMembers(rank) {
   return [
+    RANK.RESIDENT,
     RANK.DISCIPLE,
     RANK.ELDER,
     RANK.MASTER

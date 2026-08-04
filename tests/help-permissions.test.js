@@ -55,7 +55,7 @@ test("弟子只看到正式成員功能，不看到審核與管理指令", async
     rank: RANK.DISCIPLE
   });
   const content = await helpContent(env, "disciple-1");
-  assert.match(content, /你的身分：弟子/);
+  assert.match(content, /你的身分：門徒/);
   assert.match(content, /\/profile set-name|\/ai question|\/members|\/game bind/);
   assert.doesNotMatch(content, /\/apply|\/review|\/game pending|\/member get/);
 });

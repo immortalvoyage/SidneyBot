@@ -118,7 +118,7 @@ test("不能指派宗主或調整不存在的成員", async () => {
 
   await assert.rejects(
     setMemberRank(env, actor(), "member-1", RANK.MASTER),
-    /只能設定為弟子或長老/
+    /只能設定為領民、門徒或長老/
   );
 
   await assert.rejects(
@@ -137,4 +137,17 @@ test("相同身分不重複寫入", async () => {
   );
 
   assert.deepEqual(await listAudits(env), []);
+});
+
+test("未綁定 UID 的領民不能手動升為門徒或長老", async () => {
+  const env = createEnv();
+  await seedMember(env, { rank: RANK.RESIDENT });
+  await assert.rejects(
+    setMemberRank(env, actor(), "member-1", RANK.DISCIPLE),
+    /尚未綁定.*UID/
+  );
+  await assert.rejects(
+    setMemberRank(env, actor(), "member-1", RANK.ELDER),
+    /尚未綁定.*UID/
+  );
 });

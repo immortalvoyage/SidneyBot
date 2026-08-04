@@ -95,7 +95,7 @@ test("宗主可從仙遊者 KV 名冊搜尋正式成員", async () => {
 
   assert.equal(payload.type, 8);
   assert.deepEqual(payload.data.choices, [
-    { name: "月兔弟子｜弟子", value: "disciple-1" }
+    { name: "月兔弟子｜門徒", value: "disciple-1" }
   ]);
 });
 

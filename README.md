@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.2.18
+# ☯【仙遊者】☯ Discord AI Bot V4.3.8
 
 完整獨立版，使用：
 
@@ -16,7 +16,7 @@
 - `/approve applicant:<待審申請者> note:<備註>`
 - `/reject applicant:<待審申請者> note:<備註>`
 - `/member get player:<名冊玩家>`
-- `/member set-rank player:<名冊玩家> rank:<弟子或長老>`
+- `/member set-rank player:<名冊玩家> rank:<領民、門徒或長老>`
 - `/member remove player:<名冊玩家> confirm:<確認移除>`
 - `/members page:<頁碼>`
 - `/sect`
@@ -31,8 +31,9 @@
 ## 宗門權限
 
 - 外人：可使用 `/help`、`/profile view`、`/forget`、`/apply`
-- 弟子：包含個人功能，可使用 `/ai`、`/sect`、`/members` 與自己的遊戲綁定
-- 長老：包含弟子權限，可審核入宗與遊戲綁定申請
+- 領民：已加入仙遊者但尚未完成《燕雲十六聲》UID 綁定，可使用成員功能並提交綁定
+- 門徒：已完成《燕雲十六聲》UID 綁定，包含領民權限
+- 長老：管理層，包含門徒權限，可審核入宗與遊戲綁定申請
 - 宗主：完整權限，可查詢、升降階及移除成員；`SECT_MASTER_ID` 第一次互動時自動建立宗主名冊
 - 指令授權以即時 KV 名冊為準，不信任殘留的 Discord 身分組
 - `/help` 依即時 KV 身分只顯示呼叫者目前可使用的指令
@@ -153,7 +154,8 @@ npm run register
 
 ```jsonc
 "APPLICATION_REVIEW_CHANNEL_ID": "你的審核頻道 ID",
-"DISCORD_DISCIPLE_ROLE_ID": "弟子身分組 ID",
+"DISCORD_RESIDENT_ROLE_ID": "領民身分組 ID",
+"DISCORD_DISCIPLE_ROLE_ID": "門徒身分組 ID",
 "DISCORD_ELDER_ROLE_ID": "長老身分組 ID"
 ```
 
@@ -167,15 +169,16 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 
 ## Discord 身分組同步
 
-老祖 Bot 的 Discord 身分組必須位於「弟子」與「長老」之上，並具有「管理身分組」權限。
+老祖 Bot 的 Discord 身分組必須位於「領民」「門徒」「長老」之上，並具有「管理身分組」權限。
 
-- `/approve`：授予弟子，撤銷長老
-- `/member set-rank`：依 KV 新身分切換弟子／長老
-- `/member remove`：撤銷弟子與長老，保留玩家其他身分組
+- 入宗核准：授予領民
+- UID 綁定核准：領民自動改為門徒
+- `/member set-rank`：依 KV 新身分切換領民／門徒／長老；領民未綁定 UID 時不能升為門徒或長老
+- `/member remove`：撤銷領民、門徒與長老，保留玩家其他身分組
 - Discord 同步失敗時不會繼續修改 KV，指令會回報錯誤
 - 耗時管理操作已採 Discord deferred 回覆；本版本沒有修改 Slash Command 結構，從 V4.2.17 更新時不必重新註冊
-# SidneyBot v4.3.7 互動按鈕模組
+# SidneyBot v4.3.8 身分組與 UID 規則
 
 本版新增老祖每日請安面板與入宗審核按鈕。玩家每日只需點擊「向老祖請安」；宗主或長老可在指定頻道執行一次 `/panel` 或 `/面板` 建立長期面板。新入宗申請會自動送至既有審核頻道並附上「同意入宗」與「拒絕申請」按鈕，原 `/review`／`/審核` 保留作為備援。
 
-部署本版後必須先執行 `npm run register` 註冊新增的 `/panel`／`/面板`，再執行 `npm run deploy`。不需新增或修改任何 Secret。
+部署本版前必須設定 `DISCORD_RESIDENT_ROLE_ID`，並重新執行 `npm run register` 後再執行 `npm run deploy`。不需新增或修改任何 Secret。

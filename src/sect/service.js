@@ -16,6 +16,8 @@ import {
 } from "./applications.js";
 
 import { writeAudit } from "./audit.js";
+import { GAME_IDS } from "../platform/games/constants.js";
+import { getGameAccountByUser } from "../platform/games/service.js";
 import {
   canApprove,
   canManageRanks,
@@ -61,7 +63,7 @@ export async function setOwnDisplayName(env, actor, value) {
   }
 
   const current = await getMember(env, actor.userId);
-  if (!current || ![RANK.DISCIPLE, RANK.ELDER, RANK.MASTER].includes(current.rank)) {
+  if (!current || ![RANK.RESIDENT, RANK.DISCIPLE, RANK.ELDER, RANK.MASTER].includes(current.rank)) {
     throw new Error("只有仙遊者正式成員可以修改顯示名稱");
   }
 
@@ -112,14 +114,14 @@ export async function approveApplicant(
   }
 
   const discordRoleSync = syncRoles
-    ? await syncRoles(application.userId, RANK.DISCIPLE)
+    ? await syncRoles(application.userId, RANK.RESIDENT)
     : { status: "not_requested" };
 
   const member = await upsertMember(env, {
     userId: application.userId,
     username: application.username,
     displayName: application.displayName,
-    rank: RANK.DISCIPLE,
+    rank: RANK.RESIDENT,
     approvedBy: actor.userId
   });
 
@@ -201,8 +203,8 @@ export async function setMemberRank(
     throw new Error("請選擇要調整的成員");
   }
 
-  if (![RANK.DISCIPLE, RANK.ELDER].includes(rank)) {
-    throw new Error("身分只能設定為弟子或長老");
+  if (![RANK.RESIDENT, RANK.DISCIPLE, RANK.ELDER].includes(rank)) {
+    throw new Error("身分只能設定為領民、門徒或長老");
   }
 
   const target = await getMember(env, normalizedTargetId);
@@ -217,12 +219,20 @@ export async function setMemberRank(
     throw new Error("宗主身分受到保護，不能透過此指令修改");
   }
 
-  if (![RANK.DISCIPLE, RANK.ELDER].includes(target.rank)) {
-    throw new Error("只能調整正式弟子或長老的身分");
+  if (![RANK.RESIDENT, RANK.DISCIPLE, RANK.ELDER].includes(target.rank)) {
+    throw new Error("只能調整領民、門徒或長老的身分");
   }
 
   if (target.rank === rank) {
     throw new Error("該成員目前已是此身分");
+  }
+
+  if (
+    target.rank === RANK.RESIDENT &&
+    [RANK.DISCIPLE, RANK.ELDER].includes(rank) &&
+    !await getGameAccountByUser(env, GAME_IDS.WWM, normalizedTargetId)
+  ) {
+    throw new Error("領民尚未綁定《燕雲十六聲》UID，不能調整為門徒或長老");
   }
 
   const previousRank = target.rank;
@@ -253,7 +263,7 @@ export async function enrollMemberByMaster(
   env,
   actor,
   targetUser,
-  rank = RANK.DISCIPLE,
+  rank = RANK.RESIDENT,
   note = "",
   syncRoles = null
 ) {
@@ -264,13 +274,20 @@ export async function enrollMemberByMaster(
   const userId = String(targetUser?.id || "").trim();
   if (!userId) throw new Error("請在對話中 @ 提及要加入的玩家");
   if (isSectMaster(userId, env)) throw new Error("宗主已在仙遊者名冊中");
-  if (![RANK.DISCIPLE, RANK.ELDER].includes(rank)) {
-    throw new Error("新成員身分只能是弟子或長老");
+  if (![RANK.RESIDENT, RANK.ELDER].includes(rank)) {
+    throw new Error("新成員身分只能是領民或長老");
   }
 
   const existing = await getMember(env, userId);
   if (existing) {
     return { member: existing, created: false, discordRoleSync: null };
+  }
+
+  if (
+    rank === RANK.ELDER &&
+    !await getGameAccountByUser(env, GAME_IDS.WWM, userId)
+  ) {
+    throw new Error("尚未綁定《燕雲十六聲》UID，不能直接加入為長老；請先加入為領民並完成綁定");
   }
 
   const discordRoleSync = syncRoles
@@ -336,8 +353,8 @@ export async function removeSectMember(
     throw new Error("宗主身分受到保護，不能透過此指令移除");
   }
 
-  if (![RANK.DISCIPLE, RANK.ELDER].includes(target.rank)) {
-    throw new Error("只能移除正式弟子或長老");
+  if (![RANK.RESIDENT, RANK.DISCIPLE, RANK.ELDER].includes(target.rank)) {
+    throw new Error("只能移除領民、門徒或長老");
   }
 
   const discordRoleSync = syncRoles

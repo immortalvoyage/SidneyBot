@@ -11,6 +11,8 @@ import {
   requestGameBinding
 } from "../platform/games/service.js";
 import { notifyMember, notificationSummary } from "../sect/notifications.js";
+import { setMemberRank } from "../sect/service.js";
+import { syncDiscordMemberRank } from "../sect/discord-roles.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -96,6 +98,18 @@ export async function handleGame(interaction, env) {
         reviewerId: userId,
         note: subOption(interaction, "note") || ""
       });
+      let promoted = false;
+      if (targetMember.rank === "resident") {
+        await setMemberRank(
+          env,
+          member,
+          targetUserId,
+          "disciple",
+          "UID 綁定核准後自動升為門徒",
+          (memberId, rank) => syncDiscordMemberRank(env, interaction.guild_id, memberId, rank)
+        );
+        promoted = true;
+      }
       const notification = await notifyMember(env, {
         userId: targetUserId,
         actorId: userId,
@@ -103,11 +117,12 @@ export async function handleGame(interaction, env) {
         content: [
           "✅ 你的《燕雲十六聲》UID 綁定已核准。",
           `UID：${account.uid}`,
-          `角色名稱：${account.currentCharacterName}`
+          `角色名稱：${account.currentCharacterName}`,
+          promoted ? "身分：已由領民自動升為門徒" : "身分：維持原身分"
         ].join("\n")
       });
       return immediateResponse(
-        `✅ 已核准 UID ${account.uid} 綁定至 Discord ID ${account.userId}。\n${notificationSummary(notification)}`,
+        `✅ 已核准 UID ${account.uid} 綁定至 Discord ID ${account.userId}。${promoted ? "\n身分已自動調整為門徒。" : ""}\n${notificationSummary(notification)}`,
         true
       );
     }

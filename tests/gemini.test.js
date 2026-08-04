@@ -55,7 +55,7 @@ async function capturePrompt(member) {
 for (const [rank, expectedLabel] of [
   ["master", "宗主"],
   ["elder", "長老"],
-  ["disciple", "正式弟子"]
+  ["disciple", "門徒"]
 ]) {
   test(`真實 ${expectedLabel} 身分會傳入老祖 Prompt`, async () => {
     const prompt = await capturePrompt({

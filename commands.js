@@ -166,13 +166,13 @@ async function handleHelp(interaction, env) {
       "",
       "### 宗主管理指令",
       "`/member get player:<名冊玩家>`：查看成員詳細資料與燕雲綁定",
-      "`/member set-rank player:<名冊玩家> rank:<弟子或長老> note:<備註>`：調整正式成員身分",
+      "`/member set-rank player:<名冊玩家> rank:<領民、門徒或長老> note:<備註>`：調整正式成員身分",
       "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：將成員移出名冊",
       "`/audit recent`：查看最近 10 筆操作紀錄",
       "`/audit view record:<紀錄>`：查看單筆操作詳情",
       "`/system check`：檢查 KV 名冊與審核索引一致性",
       "`/system repair confirm:<確認修復>`：安全重建 KV 索引",
-      "`/詢問 問題:將 @玩家 加入仙遊者`：請老祖直接新增弟子",
+      "`/詢問 問題:將 @玩家 加入仙遊者`：請老祖直接新增領民",
       "`/詢問 問題:將 @玩家 加入仙遊者成為長老`：請老祖直接新增長老"
     );
   }

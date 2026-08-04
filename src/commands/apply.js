@@ -13,6 +13,7 @@ import { createApplication } from "../sect/applications.js";
 import { writeAudit } from "../sect/audit.js";
 import { logError } from "../../logger.js";
 import { applicationReviewComponents } from "../interactions/components.js";
+import { RANK_LABEL } from "../sect/constants.js";
 
 export async function handleApply(interaction, env, ctx) {
   const user = getUser(interaction);
@@ -29,7 +30,7 @@ export async function handleApply(interaction, env, ctx) {
 
   if (member) {
     return immediateResponse(
-      `✅ 你已是宗門成員，身分為：${member.rank}`,
+      `✅ 你已是仙遊者成員，身分為：${RANK_LABEL[member.rank] || member.rank}`,
       true
     );
   }

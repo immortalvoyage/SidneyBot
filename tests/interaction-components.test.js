@@ -86,6 +86,7 @@ test("宗主按下同意後同步名冊與萬象錄並停用原訊息按鈕", as
   const env = {
     ...createEnv(),
     DISCORD_BOT_TOKEN: "test-token",
+    DISCORD_RESIDENT_ROLE_ID: "role-resident",
     DISCORD_DISCIPLE_ROLE_ID: "role-disciple",
     DISCORD_ELDER_ROLE_ID: "role-elder"
   };
@@ -131,6 +132,6 @@ test("宗主按下同意後同步名冊與萬象錄並停用原訊息按鈕", as
   assert.equal(result.data.components[0].components.every(button => button.disabled), true);
   assert.match(result.data.content, /已同意入宗/);
   assert.equal((await getApplication(env, "200000000000000002")).status, "approved");
-  assert.equal((await getMember(env, "200000000000000002")).rank, "disciple");
+  assert.equal((await getMember(env, "200000000000000002")).rank, "resident");
   assert.equal((await getPlayerState(env, "200000000000000002")).identity.displayName, "新玩家");
 });

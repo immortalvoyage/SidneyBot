@@ -10,12 +10,16 @@ import {
   requestGameBinding
 } from "../src/platform/games/service.js";
 import { RANK } from "../src/sect/constants.js";
-import { removeMember, upsertMember } from "../src/sect/members.js";
+import { getMember, removeMember, upsertMember } from "../src/sect/members.js";
 
 function createEnv(masterId = "master-1") {
   const values = new Map();
   return {
     SECT_MASTER_ID: masterId,
+    DISCORD_BOT_TOKEN: "test-token",
+    DISCORD_RESIDENT_ROLE_ID: "role-resident",
+    DISCORD_DISCIPLE_ROLE_ID: "role-disciple",
+    DISCORD_ELDER_ROLE_ID: "role-elder",
     BOT_MEMORY: {
       async get(key) {
         const value = values.get(key);
@@ -45,7 +49,7 @@ function autocompleteInteraction({ actorId = "master-1", action = "review", valu
   };
 }
 
-function commandInteraction(targetUserId) {
+function commandInteraction(targetUserId, decision = null) {
   return {
     guild_id: "guild-1",
     member: { user: { id: "master-1", username: "master" } },
@@ -54,7 +58,10 @@ function commandInteraction(targetUserId) {
       options: [{
         name: "review",
         type: 1,
-        options: [{ name: "applicant", type: 3, value: targetUserId }]
+        options: [
+          { name: "applicant", type: 3, value: targetUserId },
+          ...(decision ? [{ name: "decision", type: 3, value: decision }] : [])
+        ]
       }]
     }
   };
@@ -171,4 +178,48 @@ test("申請者已被移出名冊時，執行階段拒絕核准綁定", async ()
     await handleGameBindingAutocomplete(autocompleteInteraction(), env)
   );
   assert.deepEqual(autocomplete.data.choices, []);
+});
+
+test("領民 UID 綁定核准後自動升為門徒並同步 Discord 身分組", async () => {
+  const env = createEnv();
+  await upsertMember(env, {
+    userId: "resident-1",
+    username: "resident",
+    displayName: "新領民",
+    rank: RANK.RESIDENT
+  });
+  await requestGameBinding(env, {
+    gameId: GAME_IDS.WWM,
+    userId: "resident-1",
+    discordName: "新領民",
+    uid: "987654321",
+    characterName: "雲遊"
+  });
+
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
+    if (String(url).includes("/guilds/guild-1/members/")) {
+      return new Response(JSON.stringify(init.method === "PATCH" ? {} : { roles: ["role-other", "role-resident"] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    if (String(url).endsWith("/users/@me/channels")) {
+      return new Response(JSON.stringify({ id: "dm-1" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ id: "message-1" }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  try {
+    const result = await responsePayload(await handleGame(commandInteraction("resident-1", "approve"), env));
+    assert.match(result.data.content, /自動調整為門徒/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal((await getMember(env, "resident-1")).rank, RANK.DISCIPLE);
+  const patchCall = calls.find(call => call.init.method === "PATCH");
+  assert.deepEqual(JSON.parse(patchCall.init.body), { roles: ["role-other", "role-disciple"] });
 });

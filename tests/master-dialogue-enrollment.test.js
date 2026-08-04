@@ -29,13 +29,13 @@ const master = {
   rank: RANK.MASTER
 };
 
-test("解析宗主新增弟子與長老的自然語言", () => {
+test("解析宗主新增領民與長老的自然語言", () => {
   assert.deepEqual(
     parseMasterEnrollmentDialogue("將 <@123456789012345678> 加入仙遊者"),
     {
       action: "enroll",
       targetUserId: "123456789012345678",
-      rank: RANK.DISCIPLE,
+      rank: RANK.RESIDENT,
       note: "將 <@123456789012345678> 加入仙遊者"
     }
   );
@@ -51,7 +51,7 @@ test("解析宗主移除成員的自然語言", () => {
     {
       action: "remove",
       targetUserId: "123456789012345678",
-      rank: RANK.DISCIPLE,
+      rank: RANK.RESIDENT,
       note: "將 <@123456789012345678> 移出仙遊者"
     }
   );
@@ -65,7 +65,7 @@ test("加入語句必須使用 Discord Mention", () => {
   assert.equal(parseMasterEnrollmentDialogue("今天天氣如何"), null);
 });
 
-test("宗主可直接加入弟子並保留未綁定 UID 狀態", async () => {
+test("宗主可直接加入領民並保留未綁定 UID 狀態", async () => {
   const env = createEnv();
   let synced = null;
   const result = await enrollMemberByMaster(
@@ -76,7 +76,7 @@ test("宗主可直接加入弟子並保留未綁定 UID 狀態", async () => {
       username: "liangjing",
       displayName: "梁淨"
     },
-    RANK.DISCIPLE,
+    RANK.RESIDENT,
     "宗主引薦",
     async (userId, rank) => {
       synced = { userId, rank };
@@ -87,7 +87,7 @@ test("宗主可直接加入弟子並保留未綁定 UID 狀態", async () => {
   assert.equal(result.created, true);
   assert.deepEqual(synced, {
     userId: "123456789012345678",
-    rank: RANK.DISCIPLE
+    rank: RANK.RESIDENT
   });
   assert.equal((await getMember(env, "123456789012345678")).displayName, "梁淨");
   const [audit] = await listAudits(env);

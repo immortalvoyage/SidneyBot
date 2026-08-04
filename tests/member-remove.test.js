@@ -146,6 +146,6 @@ test("不能移除不存在或非正式成員", async () => {
   await seedMember(env, { rank: RANK.PENDING });
   await assert.rejects(
     removeSectMember(env, actor(), "member-1", "REMOVE"),
-    /只能移除正式弟子或長老/
+    /只能移除領民、門徒或長老/
   );
 });

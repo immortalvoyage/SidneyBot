@@ -87,7 +87,7 @@ export async function handleMember(interaction, env, ctx) {
           event: "member.removed",
           content: [
             `${removed.displayName}，你已被移出仙遊者名冊。`,
-            "Discord 弟子／長老身分組已撤銷。",
+            "Discord 領民／門徒／長老身分組已撤銷。",
             "既有燕雲 UID 綁定與歷史資料目前保留。",
             "如有疑問，請直接聯絡宗主。"
           ].join("\n")
@@ -98,7 +98,7 @@ export async function handleMember(interaction, env, ctx) {
           `成員：${removed.displayName}`,
           `Discord ID：${removed.userId}`,
           "燕雲 UID 綁定與歷史資料：已保留",
-          "Discord 弟子／長老身分組：已撤銷",
+          "Discord 領民／門徒／長老身分組：已撤銷",
           notificationSummary(notification)
         ].join("\n");
       });

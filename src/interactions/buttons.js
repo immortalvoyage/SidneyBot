@@ -66,7 +66,7 @@ async function handleApplicationReview(interaction, env, review) {
         event: "application.approved",
         content: [
           `✅ ${member.displayName}，你的仙遊者入宗申請已核准。`,
-          "身分：弟子",
+          "身分：領民（完成 UID 綁定後自動成為門徒）",
           "遊戲 UID：尚未綁定",
           "",
           UID_BINDING_GUIDE

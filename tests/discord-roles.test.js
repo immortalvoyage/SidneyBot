@@ -7,6 +7,7 @@ import { syncDiscordMemberRank } from "../src/sect/discord-roles.js";
 function env() {
   return {
     DISCORD_BOT_TOKEN: "token-1",
+    DISCORD_RESIDENT_ROLE_ID: "role-resident",
     DISCORD_DISCIPLE_ROLE_ID: "role-disciple",
     DISCORD_ELDER_ROLE_ID: "role-elder"
   };
@@ -44,9 +45,16 @@ test("升任長老只替換仙遊者管理身分組並保留其他身分組", as
   assert.equal(result.status, "success");
 });
 
-test("移除成員會撤銷弟子與長老身分組但保留其他身分組", async () => {
+test("移除成員會撤銷領民、門徒與長老身分組但保留其他身分組", async () => {
   const { calls } = await captureSync(null, ["role-other", "role-elder"]);
   assert.deepEqual(JSON.parse(calls[1].init.body), { roles: ["role-other"] });
+});
+
+test("入宗核准只授予領民並撤銷其他仙遊者身分組", async () => {
+  const { calls } = await captureSync(RANK.RESIDENT, ["role-other", "role-disciple"]);
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    roles: ["role-other", "role-resident"]
+  });
 });
 
 test("身分組設定不完整時拒絕同步", async () => {

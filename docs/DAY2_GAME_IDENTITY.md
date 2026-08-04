@@ -3,6 +3,7 @@
 ## 新增功能
 
 - `/game bind uid:<UID> character_name:<角色名稱>`：玩家提交燕雲 UID 綁定。
+- 入宗核准後先成為領民；UID 綁定核准後由系統自動升為門徒並同步 Discord 身分組。
 - `/game status`：查看自己的綁定。
 - `/game pending`：宗主／長老查看待審。
 - `/game approve applicant:<待審綁定>`：從 KV 待審清單核准綁定。

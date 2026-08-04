@@ -32,7 +32,7 @@ export async function handleReview(interaction, env, ctx) {
         event: "application.approved",
         content: [
           `✅ ${member.displayName}，你的仙遊者入宗申請已核准。`,
-          "身分：弟子",
+          "身分：領民（完成 UID 綁定後自動成為門徒）",
           "遊戲 UID：尚未綁定",
           "",
           UID_BINDING_GUIDE
@@ -42,8 +42,8 @@ export async function handleReview(interaction, env, ctx) {
         "✅ 已核准入宗申請。",
         `成員：${member.displayName}`,
         `Discord ID：${member.userId}`,
-        "身分：弟子",
-        "Discord 身分組：已同步為弟子",
+        "身分：領民",
+        "Discord 身分組：已同步為領民",
         "遊戲 UID：尚未綁定",
         notificationSummary(notification)
       ].join("\n");
