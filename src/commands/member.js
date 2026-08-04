@@ -120,12 +120,26 @@ export async function handleMember(interaction, env, ctx) {
         )
       );
 
+      const notification = await notifyMember(env, {
+        userId: member.userId,
+        actorId: actor.userId,
+        event: "member.rank_changed",
+        content: [
+          `✅ ${member.displayName}，宗主已核准你的仙遊者身分調整。`,
+          `新身分：${RANK_LABEL[member.rank] || member.rank}`,
+          member.rank === "elder"
+            ? "你現在是長老，可使用 `/review` 與 `/game review` 處理申請。"
+            : "使用 `/help` 可查看目前身分能使用的指令。"
+        ].join("\n")
+      });
+
       return [
         "✅ 已調整成員身分。",
         `成員：${member.displayName}`,
         `Discord ID：${member.userId}`,
         `新身分：${RANK_LABEL[member.rank] || member.rank}`,
-        "Discord 身分組：已同步"
+        "Discord 身分組：已同步",
+        notificationSummary(notification)
       ].join("\n");
     });
   } catch (error) {

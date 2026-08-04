@@ -45,9 +45,23 @@ test("外人只看到入宗與個人指令", async () => {
   assert.match(content, /你的身分：尚未入宗/);
   assert.match(content, /\/apply/);
   assert.doesNotMatch(content, /\/profile set-name|\/ai question|\/members|\/review|\/member get|\/game bind/);
+  assert.doesNotMatch(content, /\/幫助|\/個人資料|\/遊戲|\/詢問/);
 });
 
-test("弟子只看到正式成員功能，不看到審核與管理指令", async () => {
+test("領民看到 UID 綁定申請，且不看到審核與管理指令", async () => {
+  const env = createEnv();
+  await upsertMember(env, {
+    userId: "resident-1",
+    displayName: "領民",
+    rank: RANK.RESIDENT
+  });
+  const content = await helpContent(env, "resident-1");
+  assert.match(content, /你的身分：領民/);
+  assert.match(content, /\/game bind|\/game status/);
+  assert.doesNotMatch(content, /\/apply|\/review|\/game pending|\/member get/);
+});
+
+test("門徒只看到已綁定成員功能，不再看到 UID 綁定申請", async () => {
   const env = createEnv();
   await upsertMember(env, {
     userId: "disciple-1",
@@ -56,7 +70,8 @@ test("弟子只看到正式成員功能，不看到審核與管理指令", async
   });
   const content = await helpContent(env, "disciple-1");
   assert.match(content, /你的身分：門徒/);
-  assert.match(content, /\/profile set-name|\/ai question|\/members|\/game bind/);
+  assert.match(content, /\/profile set-name|\/ai question|\/members|\/game status/);
+  assert.doesNotMatch(content, /\/game bind/);
   assert.doesNotMatch(content, /\/apply|\/review|\/game pending|\/member get/);
 });
 
@@ -70,7 +85,7 @@ test("長老看到審核功能，但看不到宗主管理指令", async () => {
   const content = await helpContent(env, "elder-1");
   assert.match(content, /你的身分：長老/);
   assert.match(content, /\/review|\/game pending/);
-  assert.doesNotMatch(content, /\/member get|\/member set-rank|\/member remove/);
+  assert.doesNotMatch(content, /\/game bind|\/member get|\/member set-rank|\/member remove/);
 });
 
 test("設定中的宗主自動建檔並看到完整管理功能", async () => {
@@ -78,5 +93,5 @@ test("設定中的宗主自動建檔並看到完整管理功能", async () => {
   const content = await helpContent(env, "master-1");
   assert.match(content, /你的身分：宗主/);
   assert.match(content, /\/review|\/game pending|\/member get|\/member set-rank|\/member remove/);
-  assert.doesNotMatch(content, /\/apply/);
+  assert.doesNotMatch(content, /\/apply|\/game bind|\/幫助|\/詢問/);
 });

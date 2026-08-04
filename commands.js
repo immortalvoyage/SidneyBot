@@ -30,8 +30,11 @@ import {
 
 import {
   canApprove,
+  canApplyForMembership,
   canManageRanks,
+  canRequestUidBinding,
   canUseAI,
+  canViewUidStatus,
   canViewMembers
 } from "./src/sect/permissions.js";
 
@@ -90,7 +93,7 @@ export async function handleCommand(
         return await handleForget(interaction, env);
 
       case "game":
-        return await handleGame(interaction, env);
+        return await handleGame(interaction, env, ctx);
 
       case "audit":
         return await handleAudit(interaction, env);
@@ -128,13 +131,13 @@ async function handleHelp(interaction, env) {
     `你的身分：${RANK_LABEL[rank] || "尚未入宗"}`,
     "",
     "### 目前可用指令",
-    "英文與中文指令功能相同，例如 `/help` = `/幫助`。",
-    "`/help`／`/幫助`：私密查看你目前能使用的指令",
-    "`/profile view`／`/個人資料 查看`：私密查看個人與仙遊者資料",
-    "`/forget`／`/忘記`：私密清除自己的 AI 對話記憶"
+    "以下只顯示你目前有權使用的指令。",
+    "`/help`：私密查看你目前能使用的指令",
+    "`/profile view`：私密查看個人與仙遊者資料",
+    "`/forget`：私密清除自己的 AI 對話記憶"
   ];
 
-  if (!member) {
+  if (canApplyForMembership(rank)) {
     lines.push(
       "`/apply reason:<理由>`：私密申請加入仙遊者"
     );
@@ -145,10 +148,19 @@ async function handleHelp(interaction, env) {
       "`/profile set-name name:<顯示名稱>`：修改自己的仙遊者名冊名稱",
       "`/ai question:<問題>`：公開向老祖提問",
       "`/sect`：私密查看仙遊者狀態與自己的身分",
-      "`/members page:<頁碼>`：私密分頁查看仙遊者名冊",
-      "`/game bind uid:<UID> character_name:<角色名稱>`：提交 UID 綁定申請",
+      "`/members page:<頁碼>`：私密分頁查看仙遊者名冊"
+    );
+  }
+
+  if (canRequestUidBinding(rank)) {
+    lines.push(
+      "",
+      "### UID 綁定申請",
+      "`/game bind uid:<UID> character_name:<角色名稱>`：提交《燕雲十六聲》UID 綁定申請",
       "`/game status`：查看自己的 UID 綁定狀態"
     );
+  } else if (canViewUidStatus(rank)) {
+    lines.push("`/game status`：查看自己的 UID 綁定狀態");
   }
 
   if (rank && canApprove(rank)) {
@@ -173,8 +185,8 @@ async function handleHelp(interaction, env) {
       "`/audit view record:<紀錄>`：查看單筆操作詳情",
       "`/system check`：檢查 KV 名冊與審核索引一致性",
       "`/system repair confirm:<確認修復>`：安全重建 KV 索引",
-      "`/詢問 問題:將 @玩家 加入仙遊者`：請老祖直接新增領民",
-      "`/詢問 問題:將 @玩家 加入仙遊者成為長老`：請老祖直接新增長老"
+      "`/ai question:將 @玩家 加入仙遊者`：請老祖直接新增領民",
+      "`/ai question:將 @玩家 加入仙遊者成為長老`：請老祖直接新增長老"
     );
   }
 

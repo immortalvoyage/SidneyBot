@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   applicationReviewComponents,
   dailyGreetingComponents,
-  parseApplicationReviewId
+  parseApplicationReviewId,
+  parseUidReviewId,
+  uidReviewComponents
 } from "../src/interactions/components.js";
 import { handleButton } from "../src/interactions/buttons.js";
 import { createApplication, reviewApplication } from "../src/sect/applications.js";
@@ -41,6 +43,12 @@ test("請安與入宗審核元件使用 Discord 原生按鈕", () => {
     { decision: "approve", userId: "200000000000000002" }
   );
   assert.equal(applicationReviewComponents("200000000000000002", true)[0].components[0].disabled, true);
+  const uidReview = uidReviewComponents("200000000000000002");
+  assert.deepEqual(
+    parseUidReviewId(uidReview[0].components[0].custom_id),
+    { decision: "approve", userId: "200000000000000002" }
+  );
+  assert.equal(uidReviewComponents("200000000000000002", true)[0].components[1].disabled, true);
 });
 
 test("非審核者點擊按鈕只收到私人拒絕訊息", async () => {

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { createChineseCommands } from "./src/commands/localization.js";
 
 loadLocalEnvironment();
@@ -8,7 +9,7 @@ const APPLICATION_ID = clean(process.env.DISCORD_APPLICATION_ID);
 const BOT_TOKEN = clean(process.env.DISCORD_BOT_TOKEN);
 const GUILD_ID = clean(process.env.DISCORD_GUILD_ID);
 
-const ENGLISH_COMMANDS = [
+export const ENGLISH_COMMANDS = [
   {
     name: "ai",
     description: "公開向老祖提問",
@@ -251,10 +252,16 @@ const ENGLISH_COMMANDS = [
   { name: "help", description: "私密查看 Bot 使用說明" }
 ];
 
-const COMMANDS = [
+// Custom sect roles cannot be represented by Discord permission bits. Keep every
+// command available at Discord's registration layer and authorize ranks in the Worker.
+export const COMMANDS = [
   ...ENGLISH_COMMANDS,
   ...createChineseCommands(ENGLISH_COMMANDS)
-];
+].map(command => ({
+  ...command,
+  default_member_permissions: null,
+  dm_permission: false
+}));
 
 async function registerCommands() {
   if (!APPLICATION_ID || !BOT_TOKEN) {
@@ -327,7 +334,9 @@ function clean(value) {
   return String(value || "").trim();
 }
 
-registerCommands().catch(error => {
-  console.error("❌ 註冊指令時發生未預期錯誤：", error?.message || error);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  registerCommands().catch(error => {
+    console.error("❌ 註冊指令時發生未預期錯誤：", error?.message || error);
+    process.exit(1);
+  });
+}

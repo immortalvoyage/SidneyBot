@@ -4,11 +4,22 @@ import { recordDailyGreeting } from "../platform/daily-greeting.js";
 import { approveApplicant, rejectApplicant, resolveActor } from "../sect/service.js";
 import { syncDiscordMemberRank } from "../sect/discord-roles.js";
 import { getApplication } from "../sect/applications.js";
-import { notifyMember, UID_BINDING_GUIDE } from "../sect/notifications.js";
+import { notifyMember, notificationSummary, UID_BINDING_GUIDE } from "../sect/notifications.js";
+import { canApprove, canUseAI } from "../sect/permissions.js";
+import { getMember } from "../sect/members.js";
+import { promoteResidentAfterUidApproval } from "../sect/service.js";
+import { GAME_IDS } from "../platform/games/constants.js";
+import {
+  approveGameBinding,
+  getBindingRequest,
+  rejectGameBinding
+} from "../platform/games/service.js";
 import {
   COMPONENT_IDS,
   applicationReviewComponents,
-  parseApplicationReviewId
+  parseApplicationReviewId,
+  parseUidReviewId,
+  uidReviewComponents
 } from "./components.js";
 
 export async function handleButton(interaction, env) {
@@ -20,7 +31,108 @@ export async function handleButton(interaction, env) {
   const review = parseApplicationReviewId(customId);
   if (review) return handleApplicationReview(interaction, env, review);
 
+  const uidReview = parseUidReviewId(customId);
+  if (uidReview) return handleUidReview(interaction, env, uidReview);
+
   return immediateResponse("❌ 這個按鈕已失效，請聯絡宗主重新建立面板。", true);
+}
+
+async function handleUidReview(interaction, env, review) {
+  const user = getUser(interaction);
+  try {
+    const actor = await resolveActor(env, user);
+    if (!actor || !canApprove(actor.rank)) {
+      return immediateResponse("❌ 你沒有審核 UID 綁定申請的權限。", true);
+    }
+    const request = await getBindingRequest(env, GAME_IDS.WWM, review.userId);
+    if (!request || request.status !== "pending") {
+      return immediateResponse("這份 UID 綁定申請已完成審核，請勿重複操作。", true);
+    }
+    const targetMember = await getMember(env, review.userId);
+    if (!targetMember || !canUseAI(targetMember.rank)) {
+      return immediateResponse("❌ 該申請者目前不是仙遊者正式成員，不能處理綁定。", true);
+    }
+
+    if (review.decision === "approve") {
+      const account = await approveGameBinding(env, {
+        gameId: GAME_IDS.WWM,
+        userId: review.userId,
+        reviewerId: actor.userId,
+        note: "由 UID 審核按鈕核准"
+      });
+      let promoted = false;
+      if (targetMember.rank === "resident") {
+        await promoteResidentAfterUidApproval(
+          env,
+          actor,
+          review.userId,
+          "UID 綁定核准後自動升為門徒",
+          (userId, rank) => syncDiscordMemberRank(env, interaction.guild_id, userId, rank)
+        );
+        promoted = true;
+      }
+      const notification = await notifyMember(env, {
+        userId: review.userId,
+        actorId: actor.userId,
+        event: "game_binding.approved",
+        content: [
+          "✅ 你的《燕雲十六聲》UID 綁定已核准。",
+          `UID：${account.uid}`,
+          `角色名稱：${account.currentCharacterName}`,
+          promoted ? "身分：已由領民自動升為門徒" : "身分：維持原身分"
+        ].join("\n")
+      });
+      return completedUidReviewMessage(
+        interaction,
+        review.userId,
+        actor,
+        "✅ 已同意 UID 綁定",
+        notification
+      );
+    }
+
+    const rejected = await rejectGameBinding(env, {
+      gameId: GAME_IDS.WWM,
+      userId: review.userId,
+      reviewerId: actor.userId,
+      note: "由 UID 審核按鈕拒絕"
+    });
+    const notification = await notifyMember(env, {
+      userId: review.userId,
+      actorId: actor.userId,
+      event: "game_binding.rejected",
+      content: [
+        "❌ 你的《燕雲十六聲》UID 綁定申請未獲核准。",
+        `UID：${rejected.uid}`,
+        "請確認 UID 與角色名稱後使用 `/game bind` 重新提交，或聯絡宗主。"
+      ].join("\n")
+    });
+    return completedUidReviewMessage(
+      interaction,
+      review.userId,
+      actor,
+      "❌ 已拒絕 UID 綁定",
+      notification
+    );
+  } catch (error) {
+    return immediateResponse(`❌ ${error.message || "UID 審核失敗"}`, true);
+  }
+}
+
+function completedUidReviewMessage(interaction, userId, actor, result, notification) {
+  const original = String(interaction.message?.content || "").split("\n---\n")[0];
+  const reviewer = actor.displayName || actor.username || actor.userId;
+  return updateMessageResponse({
+    content: [
+      original,
+      "---",
+      `審核結果：${result}`,
+      `審核者：${reviewer}`,
+      `審核時間：${new Date().toISOString()}`,
+      notificationSummary(notification)
+    ].join("\n"),
+    components: uidReviewComponents(userId, true)
+  });
 }
 
 async function handleDailyGreeting(interaction, env) {

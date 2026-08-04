@@ -1,7 +1,13 @@
-import { immediateResponse } from "../../discord.js";
+import { immediateResponse, sendChannelMessage } from "../../discord.js";
+import { logError } from "../../logger.js";
 import { getDisplayName, getUser, getUserId } from "../../utils.js";
 import { ensureMaster, getMember } from "../sect/members.js";
-import { canApprove, canUseAI } from "../sect/permissions.js";
+import {
+  canApprove,
+  canRequestUidBinding,
+  canUseAI,
+  canViewUidStatus
+} from "../sect/permissions.js";
 import { GAME_IDS } from "../platform/games/constants.js";
 import {
   approveGameBinding,
@@ -11,8 +17,9 @@ import {
   requestGameBinding
 } from "../platform/games/service.js";
 import { notifyMember, notificationSummary } from "../sect/notifications.js";
-import { setMemberRank } from "../sect/service.js";
+import { promoteResidentAfterUidApproval } from "../sect/service.js";
 import { syncDiscordMemberRank } from "../sect/discord-roles.js";
+import { uidReviewComponents } from "../interactions/components.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -22,7 +29,7 @@ function subOption(interaction, name) {
   return subcommand(interaction)?.options?.find(item => item.name === name)?.value;
 }
 
-export async function handleGame(interaction, env) {
+export async function handleGame(interaction, env, ctx) {
   const action = subcommand(interaction)?.name;
   const user = getUser(interaction);
   const userId = getUserId(interaction);
@@ -34,6 +41,14 @@ export async function handleGame(interaction, env) {
   }
 
   if (action === "bind") {
+    if (!canRequestUidBinding(member.rank)) {
+      return immediateResponse(
+        member.rank === "resident"
+          ? "❌ 你目前無法提交 UID 綁定申請。"
+          : "ℹ️ `/game bind` 只供尚未綁定 UID 的領民使用；你目前不需要再次申請。",
+        true
+      );
+    }
     const request = await requestGameBinding(env, {
       gameId: GAME_IDS.WWM,
       userId,
@@ -41,6 +56,12 @@ export async function handleGame(interaction, env) {
       uid: subOption(interaction, "uid"),
       characterName: subOption(interaction, "character_name")
     });
+    const notify = notifyUidReviewChannel(env, request);
+    if (ctx?.waitUntil) {
+      ctx.waitUntil(notify);
+    } else {
+      await notify;
+    }
     return immediateResponse([
       "✅ 已提交《燕雲十六聲》角色綁定申請。",
       `UID：${request.uid}`,
@@ -50,6 +71,9 @@ export async function handleGame(interaction, env) {
   }
 
   if (action === "status") {
+    if (!canViewUidStatus(member.rank)) {
+      return immediateResponse("❌ 你目前無權查看 UID 綁定狀態。", true);
+    }
     const account = await getGameAccountByUser(env, GAME_IDS.WWM, userId);
     if (!account) {
       return immediateResponse("尚未完成《燕雲十六聲》UID 綁定。", true);
@@ -100,11 +124,10 @@ export async function handleGame(interaction, env) {
       });
       let promoted = false;
       if (targetMember.rank === "resident") {
-        await setMemberRank(
+        await promoteResidentAfterUidApproval(
           env,
           member,
           targetUserId,
-          "disciple",
           "UID 綁定核准後自動升為門徒",
           (memberId, rank) => syncDiscordMemberRank(env, interaction.guild_id, memberId, rank)
         );
@@ -154,4 +177,26 @@ export async function handleGame(interaction, env) {
   }
 
   return immediateResponse("❌ 不支援的 /game 子指令。", true);
+}
+
+async function notifyUidReviewChannel(env, request) {
+  try {
+    await sendChannelMessage(
+      env.APPLICATION_REVIEW_CHANNEL_ID,
+      env.DISCORD_BOT_TOKEN,
+      [
+        "🎮 **收到新的《燕雲十六聲》UID 綁定申請**",
+        `申請者：${request.discordName}`,
+        `Discord ID：${request.userId}`,
+        `遊戲 UID：${request.uid}`,
+        `角色名稱：${request.characterName}`,
+        `申請時間：${request.requestedAt}`,
+        "",
+        "請點擊下方按鈕審核；`/game review` 仍可作為備援。"
+      ].join("\n"),
+      { components: uidReviewComponents(request.userId) }
+    );
+  } catch (error) {
+    logError("UID 綁定申請通知發送失敗", error);
+  }
 }

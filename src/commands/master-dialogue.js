@@ -103,7 +103,7 @@ export async function processMasterEnrollmentDialogue(interaction, instruction, 
           `身分：${RANK_LABEL[member.rank]}`,
           `Discord ID：${member.userId}`,
           "遊戲 UID：尚未綁定",
-          "請玩家自行使用 `/遊戲 綁定`，或由宗主使用既有管理功能處理。",
+          "請玩家自行使用 `/game bind` 提交 UID 綁定申請。",
           notificationSummary(notification)
         ].join("\n")
       : [

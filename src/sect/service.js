@@ -259,6 +259,44 @@ export async function setMemberRank(
   return { ...updated, discordRoleSync };
 }
 
+export async function promoteResidentAfterUidApproval(
+  env,
+  actor,
+  targetUserId,
+  note = "",
+  syncRoles = null
+) {
+  if (!actor || !canApprove(actor.rank)) {
+    throw new Error("只有宗主或長老可以核准 UID 綁定");
+  }
+
+  const normalizedTargetId = String(targetUserId || "").trim();
+  const target = await getMember(env, normalizedTargetId);
+  if (!target || target.rank !== RANK.RESIDENT) {
+    throw new Error("只有領民能在 UID 核准後自動升為門徒");
+  }
+  if (!await getGameAccountByUser(env, GAME_IDS.WWM, normalizedTargetId)) {
+    throw new Error("尚未完成《燕雲十六聲》UID 綁定，不能升為門徒");
+  }
+
+  const discordRoleSync = syncRoles
+    ? await syncRoles(normalizedTargetId, RANK.DISCIPLE)
+    : { status: "not_requested" };
+  const updated = await upsertMember(env, { ...target, rank: RANK.DISCIPLE });
+  await writeAudit(env, {
+    action: "member.promoted_after_uid_approval",
+    actorId: actor.userId,
+    targetId: normalizedTargetId,
+    details: {
+      previousRank: RANK.RESIDENT,
+      newRank: RANK.DISCIPLE,
+      note: String(note || "").trim(),
+      discordRoleSync
+    }
+  });
+  return { ...updated, discordRoleSync };
+}
+
 export async function enrollMemberByMaster(
   env,
   actor,

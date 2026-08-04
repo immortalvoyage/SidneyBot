@@ -11,6 +11,7 @@ import {
 } from "../src/platform/games/service.js";
 import { RANK } from "../src/sect/constants.js";
 import { getMember, removeMember, upsertMember } from "../src/sect/members.js";
+import { handleButton } from "../src/interactions/buttons.js";
 
 function createEnv(masterId = "master-1") {
   const values = new Map();
@@ -67,6 +68,24 @@ function commandInteraction(targetUserId, decision = null) {
   };
 }
 
+function bindInteraction(actorId, uid = "246801357", characterName = "領民角色") {
+  return {
+    guild_id: "guild-1",
+    member: { user: { id: actorId, username: actorId } },
+    data: {
+      name: "game",
+      options: [{
+        name: "bind",
+        type: 1,
+        options: [
+          { name: "uid", type: 3, value: uid },
+          { name: "character_name", type: 3, value: characterName }
+        ]
+      }]
+    }
+  };
+}
+
 async function responsePayload(response) {
   return JSON.parse(await response.text());
 }
@@ -86,6 +105,110 @@ async function seedPending(env, userId = "member-1") {
     characterName: "皓月"
   });
 }
+
+test("只有領民可提交 UID 綁定申請，門徒不需重複申請", async () => {
+  const env = createEnv();
+  await upsertMember(env, {
+    userId: "resident-1",
+    displayName: "新領民",
+    rank: RANK.RESIDENT
+  });
+  await upsertMember(env, {
+    userId: "disciple-1",
+    displayName: "既有門徒",
+    rank: RANK.DISCIPLE
+  });
+
+  const resident = await responsePayload(await handleGame(bindInteraction("resident-1"), env));
+  const disciple = await responsePayload(await handleGame(bindInteraction("disciple-1"), env));
+
+  assert.match(resident.data.content, /已提交《燕雲十六聲》角色綁定申請/);
+  assert.match(disciple.data.content, /只供尚未綁定 UID 的領民使用/);
+});
+
+test("領民提交 UID 後把按鈕申請卡送到指定審核頻道", async () => {
+  const env = {
+    ...createEnv(),
+    APPLICATION_REVIEW_CHANNEL_ID: "1533875614568812605"
+  };
+  await upsertMember(env, {
+    userId: "resident-1",
+    displayName: "新領民",
+    rank: RANK.RESIDENT
+  });
+  const originalFetch = globalThis.fetch;
+  let captured;
+  globalThis.fetch = async (url, init = {}) => {
+    captured = { url: String(url), init };
+    return new Response(JSON.stringify({ id: "review-message-1" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  };
+  try {
+    await handleGame(bindInteraction("resident-1"), env);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.match(captured.url, /channels\/1533875614568812605\/messages$/);
+  const body = JSON.parse(captured.init.body);
+  assert.match(body.content, /UID 綁定申請/);
+  assert.match(body.content, /246801357/);
+  assert.equal(body.components[0].components.length, 2);
+  assert.match(body.components[0].components[0].custom_id, /sidney:uid-review:v1:approve:resident-1/);
+});
+
+test("UID 審核按鈕拒絕未授權者，宗主同意後升為門徒並停用按鈕", async () => {
+  const env = createEnv("100000000000000001");
+  await upsertMember(env, {
+    userId: "200000000000000002",
+    username: "resident",
+    displayName: "新領民",
+    rank: RANK.RESIDENT
+  });
+  await requestGameBinding(env, {
+    gameId: GAME_IDS.WWM,
+    userId: "200000000000000002",
+    discordName: "新領民",
+    uid: "987654321",
+    characterName: "雲遊"
+  });
+  const unauthorized = await responsePayload(await handleButton({
+    guild_id: "guild-1",
+    member: { user: { id: "300000000000000003", username: "outsider" } },
+    data: { custom_id: "sidney:uid-review:v1:reject:200000000000000002" }
+  }, env));
+  assert.match(unauthorized.data.content, /沒有審核 UID 綁定申請的權限/);
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    if (String(url).includes("/guilds/guild-1/members/")) {
+      return new Response(JSON.stringify(init.method === "PATCH" ? {} : { roles: ["role-resident"] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    if (String(url).endsWith("/users/@me/channels")) {
+      return new Response(JSON.stringify({ id: "dm-1" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ id: "message-1" }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  let approved;
+  try {
+    approved = await responsePayload(await handleButton({
+      guild_id: "guild-1",
+      member: { user: { id: "100000000000000001", username: "master", global_name: "宗主" } },
+      data: { custom_id: "sidney:uid-review:v1:approve:200000000000000002" },
+      message: { content: "🎮 UID 綁定申請" }
+    }, env));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(approved.type, 7);
+  assert.match(approved.data.content, /已同意 UID 綁定/);
+  assert.equal(approved.data.components[0].components.every(button => button.disabled), true);
+  assert.equal((await getMember(env, "200000000000000002")).rank, RANK.DISCIPLE);
+});
 
 test("宗主與長老可從 KV 待審 UID 綁定搜尋，弟子不可讀取", async () => {
   const env = createEnv();

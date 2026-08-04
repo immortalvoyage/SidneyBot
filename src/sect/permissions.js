@@ -21,6 +21,23 @@ export function canApprove(rank) {
   ].includes(rank);
 }
 
+export function canApplyForMembership(rank) {
+  return !rank;
+}
+
+export function canRequestUidBinding(rank) {
+  return rank === RANK.RESIDENT;
+}
+
+export function canViewUidStatus(rank) {
+  return [
+    RANK.RESIDENT,
+    RANK.DISCIPLE,
+    RANK.ELDER,
+    RANK.MASTER
+  ].includes(rank);
+}
+
 export function canManageRanks(rank) {
   return rank === RANK.MASTER;
 }

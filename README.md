@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.9
+# ☯【仙遊者】☯ Discord AI Bot V4.3.12
 
 完整獨立版，使用：
 
@@ -186,3 +186,27 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 # SidneyBot v4.3.9 萬象錄對話整合
 
 老祖對話現在會讀取程式實際保存的好感、信任、記仇與每日請安摘要。這些資料只影響語氣與互動意願，AI 不得自行修改分數、捏造原因或繞過宗門權限。`/profile view`／`/個人資料 查看` 亦會顯示本人可見的好感、信任與請安摘要。
+
+# SidneyBot v4.3.10 申請權限與 Help 清單
+
+- `@everyone`：可使用 `/apply` 申請加入仙遊者；核准後成為領民。
+- 領民：可使用 `/game bind` 申請綁定 UID；核准後自動成為門徒。
+- 門徒：已完成 UID 綁定，不再顯示或允許重複使用 `/game bind`。
+- 長老：可使用 `/review` 與 `/game review` 審核申請。
+- 宗主：可使用 `/member set-rank` 將已綁定 UID 的門徒晉升為長老。
+- `/help` 只列出呼叫者目前有權使用的指令，玩家可見說明一律使用英文 Slash 指令名稱。
+
+# SidneyBot v4.3.11 Discord 指令權限修正
+
+- 所有 Slash Commands 在 Discord 註冊層不要求內建管理權限，實際權限由 Worker 依宗門身分判斷。
+- 領民可呼叫 `/game bind` 提交 UID 與角色名稱；核准後自動升為門徒。
+- 本版修改了 Discord 指令註冊資料，部署時必須依序執行 `npm run register` 與 `npm run deploy`。
+- 若 Discord 伺服器的「整合 → 老祖 Bot → 指令」曾由管理者手動限制 `/game`，仍須在 Discord 設定中將該手動覆寫恢復為所有成員可用。
+
+# SidneyBot v4.3.12 UID 綁定按鈕審核
+
+- 領民提交 `/game bind` 後，申請卡會送到 `APPLICATION_REVIEW_CHANNEL_ID`。
+- UID 申請卡提供「同意 UID 綁定」與「拒絕 UID 綁定」按鈕。
+- 宗主或長老可按鈕審核；核准後領民自動升為門徒並同步 Discord 身分組。
+- 完成審核後停用原按鈕並記錄審核人與時間。
+- `/game review` 保留為備援審核方式。
