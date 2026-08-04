@@ -13,6 +13,6 @@
     "setup:discord": "powershell -ExecutionPolicy Bypass -File scripts/setup-discord-local.ps1"
   },
   "devDependencies": {
-    "wrangler": "^4.28.0"
+    "wrangler": "^4.118.0"
   }
 }
