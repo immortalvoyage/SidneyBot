@@ -34,8 +34,8 @@ function interaction(userId, page) {
   };
 }
 
-async function content(response) {
-  return (await response.json()).data.content;
+async function data(response) {
+  return (await response.json()).data;
 }
 
 async function seedMembers(env, count = 32) {
@@ -53,35 +53,41 @@ async function seedMembers(env, count = 32) {
   }
 }
 
-test("/members 預設只顯示第一頁並提供下一頁提示", async () => {
+test("/members 使用分組手機排版並提供互動按鈕", async () => {
   const env = createEnv();
   await seedMembers(env);
 
-  const text = await content(await handleCommand(interaction("member-02"), env, {}));
-  assert.match(text, /第 1\/3 頁｜共 32 人/);
-  assert.match(text, /下一頁：`\/members page:2`/);
-  assert.equal(text.split("\n").filter(line => /^\d+\./.test(line)).length, PAGE_SIZE);
-  assert.ok(text.length < 2000);
+  const result = await data(await handleCommand(interaction("member-02"), env, {}));
+  assert.match(result.content, /共 32 人/);
+  assert.match(result.content, /宗主 1｜長老 1｜門徒 30｜領民 0/);
+  assert.match(result.content, /第 1\/4 頁/);
+  assert.match(result.content, /【宗主】[\s\S]*👑 宗主/);
+  assert.doesNotMatch(result.content, /member-\d|Discord ID|^\d+\./m);
+  assert.equal(result.content.split("\n").filter(line => ["👑 ", "🌙 ", "⚔️ ", "🌱 "].some(prefix => line.startsWith(prefix))).length, PAGE_SIZE);
+  assert.deepEqual(result.components[0].components.map(button => button.label), ["上一頁", "下一頁", "查找玩家", "重新整理"]);
+  assert.equal(result.components[0].components[0].disabled, true);
+  assert.equal(result.components[0].components[1].disabled, false);
 });
 
-test("/members 可查看指定頁並維持全名冊序號", async () => {
+test("/members 可查看指定頁並維持每頁十人", async () => {
   const env = createEnv();
   await seedMembers(env);
 
-  const text = await content(await handleCommand(interaction("member-02", 2), env, {}));
-  assert.match(text, /第 2\/3 頁｜共 32 人/);
-  assert.match(text, /^16\. /m);
-  assert.match(text, /^30\. /m);
-  assert.doesNotMatch(text, /^15\. /m);
+  const result = await data(await handleCommand(interaction("member-02", 2), env, {}));
+  assert.match(result.content, /第 2\/4 頁/);
+  assert.match(result.content, /⚔️ 成員10/);
+  assert.match(result.content, /⚔️ 成員19/);
+  assert.doesNotMatch(result.content, /成員09|成員20/);
+  assert.equal(result.components[0].components[0].disabled, false);
 });
 
 test("/members 拒絕超出範圍頁碼且外人仍無法查看", async () => {
   const env = createEnv();
   await seedMembers(env);
 
-  const invalid = await content(await handleCommand(interaction("member-02", 4), env, {}));
-  assert.match(invalid, /頁碼超出範圍.*3 頁/);
+  const invalid = (await data(await handleCommand(interaction("member-02", 5), env, {}))).content;
+  assert.match(invalid, /頁碼超出範圍.*4 頁/);
 
-  const denied = await content(await handleCommand(interaction("outsider", 1), env, {}));
-  assert.match(denied, /只有宗門成員/);
+  const denied = (await data(await handleCommand(interaction("outsider", 1), env, {}))).content;
+  assert.match(denied, /只有仙遊者成員/);
 });

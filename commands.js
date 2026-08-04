@@ -148,7 +148,7 @@ async function handleHelp(interaction, env) {
       "`/profile set-name name:<顯示名稱>`：修改自己的仙遊者名冊名稱",
       "`/ai question:<問題>`：公開向老祖提問",
       "`/sect`：私密查看仙遊者狀態與自己的身分",
-      "`/members page:<頁碼>`：私密分頁查看仙遊者名冊"
+      "`/members page:<頁碼>`：私密查看手機版仙遊者名冊，可用按鈕翻頁與查找玩家"
     );
   }
 

@@ -29,7 +29,7 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(
-        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.16"} is running.`
+        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.17"} is running.`
       );
     }
 

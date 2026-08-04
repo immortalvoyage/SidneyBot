@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.16
+# ☯【仙遊者】☯ Discord AI Bot V4.3.17
 
 完整獨立版，使用：
 
@@ -41,7 +41,7 @@
 - `/game approve`、`/game reject` 只顯示 KV 中仍待審且仍是正式成員的申請者
 - `/audit` 只允許宗主私密查看最近操作紀錄與單筆詳情
 - `/system check` 只讀檢查名冊、申請、Audit 與待審遊戲綁定索引；`/system repair` 經確認後只重建索引，不刪除實體資料
-- `/members` 每頁最多顯示 15 人，避免名冊成長後超過 Discord 訊息限制
+- `/members` 使用宗主、長老、門徒、領民分組排版，每頁最多顯示 10 人；總覽隱藏 Discord ID，並提供按鈕翻頁、查找玩家及重新整理
 - `/approve`、`/member set-rank`、`/member remove`、`/system check`、`/system repair` 會先回覆私密等待狀態，再於背景更新結果，避免 Discord 首次回覆逾時
 
 ## 1. 安裝
@@ -225,6 +225,12 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 
 - 宗主送出 UID Modal 後會立即回覆 Discord，再於背景完成綁定與晉升，避免顯示「出問題了，再試一次」。
 - UID 已寫入但身分組同步失敗時，會明確顯示部分完成狀態，不會把成功綁定誤報為整體失敗。
+
+## v4.3.17 名冊介面與手機排版優化
+
+- 名冊依身分分組，以獨立名稱列呈現並隱藏 Discord ID。
+- 每頁 10 人，提供上一頁、下一頁、查找玩家及重新整理按鈕。
+- 玩家 UID 與遊戲名稱只在查找後的個人資料畫面顯示。
 
 ## v4.3.16 宗主管理候選名單一致性
 

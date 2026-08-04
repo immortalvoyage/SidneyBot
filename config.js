@@ -1,7 +1,7 @@
 const CONFIG = Object.freeze({
   APP: Object.freeze({
     NAME: "Sidney Platform - 仙遊者 Discord Module",
-    VERSION: "4.3.16"
+    VERSION: "4.3.17"
   }),
 
   GEMINI: Object.freeze({
