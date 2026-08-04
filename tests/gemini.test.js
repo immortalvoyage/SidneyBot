@@ -86,6 +86,15 @@ test("Cloudflare env 會覆蓋 config.js 的 Gemini 設定", () => {
   });
 });
 
+test("內建模型設定不包含 gemini-2.5", () => {
+  const settings = resolveGeminiSettings({});
+  assert.deepEqual(settings.models, [
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash"
+  ]);
+  assert.equal(settings.models.some(model => model.includes("gemini-2.5")), false);
+});
+
 test("主模型失敗後會依序使用備援模型", async () => {
   const originalFetch = globalThis.fetch;
   const calledModels = [];

@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.3.3
+
+- 新增宗主透過 `/ai`／`/詢問` 自然語言要求老祖加入新弟子或長老。
+- 從 Discord Mention 取得 User ID，並以伺服器暱稱／顯示名稱建立名冊。
+- 新增成員時同步 Discord 身分組並寫入 Audit；既有成員不重複建立。
+- 遊戲 UID 保持未綁定，沿用玩家自行綁定與既有宗主管理流程。
+- 移除所有內建 `gemini-2.5` 備援，固定使用 3.5 系列設定。
+- `wrangler.jsonc` 帶入既有非敏感 ID，避免每次更新重填。
+
 ## 4.2.18
 
 - 耗時管理指令先回覆 Discord 私密 deferred acknowledgement，再於背景更新原訊息。

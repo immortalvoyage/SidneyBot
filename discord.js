@@ -111,6 +111,23 @@ export async function replaceGuildMemberRoles(
   return { previousRoles: existing, roles };
 }
 
+export async function getGuildMember(guildId, userId, botToken) {
+  const normalizedGuildId = String(guildId || "").trim();
+  const normalizedUserId = String(userId || "").trim();
+  const normalizedToken = String(botToken || "").trim();
+
+  if (!normalizedGuildId || !normalizedUserId || !normalizedToken) {
+    throw new Error("缺少 Discord 伺服器、玩家或 Bot Token 設定");
+  }
+
+  const response = await discordFetch(
+    `${DISCORD_API}/guilds/${normalizedGuildId}/members/${normalizedUserId}`,
+    { headers: { Authorization: `Bot ${normalizedToken}` } }
+  );
+
+  return response.json();
+}
+
 async function discordFetch(url, init, attempts = 3) {
   let lastError;
 

@@ -25,7 +25,7 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(
-        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.2.4"} is running.`
+        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.3"} is running.`
       );
     }
 

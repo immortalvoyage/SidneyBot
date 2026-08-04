@@ -249,6 +249,60 @@ export async function setMemberRank(
   return { ...updated, discordRoleSync };
 }
 
+export async function enrollMemberByMaster(
+  env,
+  actor,
+  targetUser,
+  rank = RANK.DISCIPLE,
+  note = "",
+  syncRoles = null
+) {
+  if (!actor || !isSectMaster(actor.userId, env) || actor.rank !== RANK.MASTER) {
+    throw new Error("只有宗主可以請老祖直接加入新成員");
+  }
+
+  const userId = String(targetUser?.id || "").trim();
+  if (!userId) throw new Error("請在對話中 @ 提及要加入的玩家");
+  if (isSectMaster(userId, env)) throw new Error("宗主已在仙遊者名冊中");
+  if (![RANK.DISCIPLE, RANK.ELDER].includes(rank)) {
+    throw new Error("新成員身分只能是弟子或長老");
+  }
+
+  const existing = await getMember(env, userId);
+  if (existing) {
+    return { member: existing, created: false, discordRoleSync: null };
+  }
+
+  const discordRoleSync = syncRoles
+    ? await syncRoles(userId, rank)
+    : { status: "not_requested" };
+  const username = String(targetUser.username || "unknown").trim() || "unknown";
+  const displayName = normalizeMemberDisplayName(
+    targetUser.displayName || targetUser.globalName || username
+  );
+  const member = await upsertMember(env, {
+    userId,
+    username,
+    displayName,
+    rank,
+    approvedBy: actor.userId
+  });
+
+  await writeAudit(env, {
+    action: "member.enrolled_by_master_dialogue",
+    actorId: actor.userId,
+    targetId: userId,
+    details: {
+      rank,
+      note: String(note || "").trim(),
+      gameUidBound: false,
+      discordRoleSync
+    }
+  });
+
+  return { member, created: true, discordRoleSync };
+}
+
 export async function removeSectMember(
   env,
   actor,

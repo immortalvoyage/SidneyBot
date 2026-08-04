@@ -1,14 +1,13 @@
 const CONFIG = Object.freeze({
   APP: Object.freeze({
     NAME: "Sidney Platform - 仙遊者 Discord Module",
-    VERSION: "4.2.5"
+    VERSION: "4.3.3"
   }),
 
   GEMINI: Object.freeze({
     MODEL: "gemini-3.5-flash-lite",
     FALLBACK_MODELS: [
-      "gemini-2.5-flash",
-      "gemini-2.5-flash-lite"
+      "gemini-3.5-flash"
     ],
     MAX_OUTPUT_TOKENS: 1600,
     REQUEST_TIMEOUT_MS: 45000,

@@ -4,14 +4,15 @@
   "compatibility_date": "2026-07-01",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "APP_VERSION": "4.3.2",
+    "APP_VERSION": "4.3.3",
     "SECT_NAME": "☯【仙遊者】☯",
-    "SECT_MASTER_ID": "請填入宗主 Discord User ID",
-	"APPLICATION_REVIEW_CHANNEL_ID": "請填入入宗審核頻道 ID",
-	"DISCORD_DISCIPLE_ROLE_ID": "請填入弟子身分組 ID",
-	"DISCORD_ELDER_ROLE_ID": "請填入長老身分組 ID",
-    "GEMINI_MODEL": "gemini-2.5-flash",
-    "GEMINI_FALLBACK_MODELS": "gemini-2.5-flash-lite,gemini-2.0-flash",
+    "SECT_MASTER_ID": "1179245490081103994",
+	"APPLICATION_REVIEW_CHANNEL_ID": "1533875614568812605",
+	"DISCORD_DISCIPLE_ROLE_ID": "1512261196449841224",
+	"DISCORD_ELDER_ROLE_ID": "1533885265700061298",
+	"REDEEM_CODE_CHANNEL_ID": "1531897588687704116",
+    "GEMINI_MODEL": "gemini-3.5-flash-lite",
+    "GEMINI_FALLBACK_MODELS": "gemini-3.5-flash",
     "GEMINI_MAX_OUTPUT_TOKENS": "1600",
     "GEMINI_TIMEOUT_MS": "45000",
     "GEMINI_MAX_RETRIES": "2"
@@ -19,7 +20,7 @@
   "kv_namespaces": [
     {
       "binding": "BOT_MEMORY",
-      "id": "請填入 KV namespace ID"
+      "id": "cf0fce4929484ce689b8c9af9abe4aaf"
     }
   ]
 }
