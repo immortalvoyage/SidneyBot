@@ -1,6 +1,6 @@
 import { componentResponse, deferredResponse, editOriginalResponse, getGuildMember, immediateResponse, listGuildMembers, modalResponse, updateMessageResponse } from "../../discord.js";
 import { getUser } from "../../utils.js";
-import { getMember } from "../sect/members.js";
+import { getMember, listMembers } from "../sect/members.js";
 import { isSectMaster } from "../sect/permissions.js";
 import { enrollMemberByMaster, promoteResidentAfterUidApproval, removeSectMember, resolveActor, setMemberRank } from "../sect/service.js";
 import { syncDiscordMemberRank } from "../sect/discord-roles.js";
@@ -9,7 +9,7 @@ import { GAME_IDS } from "../platform/games/constants.js";
 import { approveGameBinding, getGameAccountByUser, requestGameBinding } from "../platform/games/service.js";
 import { listAudits } from "../sect/audit.js";
 import { notifyMember } from "../sect/notifications.js";
-import { adminCandidateSelect, adminRemoveConfirmComponents, adminUidModal, adminUserSelect, COMPONENT_IDS, masterAdminPanelComponents } from "./components.js";
+import { adminCandidateSelect, adminRemoveConfirmComponents, adminUidModal, COMPONENT_IDS, masterAdminPanelComponents } from "./components.js";
 
 const PREFIX = `${COMPONENT_IDS.ADMIN_PREFIX}:`;
 
@@ -45,26 +45,43 @@ export async function handleAdminInteraction(interaction, env, ctx) {
   if (ctx?.waitUntil && earlyKey.startsWith("modal:bind:")) {
     return runDeferredBindModal(interaction, env, ctx, earlyKey.slice(11));
   }
-  if (ctx?.waitUntil && (earlyKey === "add" || earlyKey.startsWith("add-page:") || earlyKey.startsWith("select-add:"))) {
+  if (ctx?.waitUntil && isDeferredCandidateKey(earlyKey)) {
     return runDeferredAdmin(interaction, env, ctx, earlyKey);
   }
   try {
     const actor = await requireMaster(interaction, env);
     const key = customId.slice(PREFIX.length);
-    if (key === "add") return addCandidateResponse(interaction, env, 0);
-    if (key.startsWith("add-page:")) return addCandidateResponse(interaction, env, key.slice(9), true);
-    if (["bind", "promote", "demote", "view", "remove"].includes(key)) return componentResponse(`請選擇要執行「${actionLabel(key)}」的玩家。`, adminUserSelect(key), true);
+    if (candidateActions().includes(key)) return candidateResponse(interaction, env, key, 0);
+    if (key.startsWith("candidate-page:")) {
+      const [, action, page] = key.split(":");
+      return candidateResponse(interaction, env, action, page, true);
+    }
     if (key === "audit") return recentAudit(env);
     if (key === "refresh") return updateMessageResponse({ content: "☯ **仙遊者・宗主管理面板**\n面板已重新整理。所有操作都會驗證宗主身分並留下紀錄。", components: masterAdminPanelComponents() });
     if (key === "cancel") return updateMessageResponse({ content: "已取消操作。", components: [] });
-    if (key.startsWith("select:")) return handleSelection(interaction, env, actor, key.slice(7));
-    if (key.startsWith("select-add:")) return handleAddSelection(interaction, env, actor);
+    if (key.startsWith("select-candidate:")) {
+      const action = key.split(":")[1];
+      if (action === "bind") {
+        const member = await getMember(env, String(interaction.data?.values?.[0] || ""));
+        if (!member) throw new Error("找不到該仙遊者成員，請重新開啟選單");
+        return handleSelection(interaction, env, actor, action, member);
+      }
+      return handleCandidateSelection(interaction, env, actor, action);
+    }
     if (key.startsWith("modal:bind:")) return handleBindModal(interaction, env, actor, key.slice(11));
     if (key.startsWith("confirm-remove:")) return handleRemove(interaction, env, actor, key.slice(15));
     return immediateResponse("❌ 這個管理操作已失效，請重新點選面板。", true);
   } catch (error) {
     return immediateResponse(`❌ ${error.message || "宗主管理操作失敗"}`, true);
   }
+}
+
+function candidateActions() {
+  return ["add", "bind", "promote", "demote", "view", "remove"];
+}
+
+function isDeferredCandidateKey(key) {
+  return candidateActions().includes(key) || key.startsWith("candidate-page:") || (key.startsWith("select-candidate:") && !key.startsWith("select-candidate:bind:"));
 }
 
 function runDeferredBindModal(interaction, env, ctx, userId) {
@@ -90,9 +107,14 @@ function runDeferredAdmin(interaction, env, ctx, key) {
     try {
       const actor = await requireMaster(interaction, env);
       let result;
-      if (key === "add") result = await addCandidateData(interaction, env, 0);
-      else if (key.startsWith("add-page:")) result = await addCandidateData(interaction, env, key.slice(9));
-      else result = await handleAddSelectionData(interaction, env, actor);
+      if (candidateActions().includes(key)) result = await candidateData(interaction, env, key, 0);
+      else if (key.startsWith("candidate-page:")) {
+        const [, action, page] = key.split(":");
+        result = await candidateData(interaction, env, action, page);
+      } else {
+        const action = key.split(":")[1];
+        result = await handleCandidateSelectionData(interaction, env, actor, action);
+      }
       await editOriginalResponse(interaction.application_id, interaction.token, result.content, { components: result.components || [] });
     } catch (error) {
       await editOriginalResponse(interaction.application_id, interaction.token, `❌ ${error.message || "宗主管理操作失敗"}`, { components: [] });
@@ -121,27 +143,56 @@ async function addCandidates(interaction, env) {
     .sort((a, b) => a.displayName.localeCompare(b.displayName, "zh-Hant"));
 }
 
-async function addCandidateResponse(interaction, env, page = 0, update = false) {
-  const data = await addCandidateData(interaction, env, page);
+async function candidateResponse(interaction, env, action, page = 0, update = false) {
+  const data = await candidateData(interaction, env, action, page);
   return update ? updateMessageResponse(data) : componentResponse(data.content, data.components, true);
 }
 
-async function addCandidateData(interaction, env, page = 0) {
-  const candidates = await addCandidates(interaction, env);
+async function candidateData(interaction, env, action, page = 0) {
+  if (!candidateActions().includes(action)) throw new Error("不支援的管理操作");
+  const candidates = action === "add" ? await addCandidates(interaction, env) : await rosterCandidates(env, action);
   return {
-    content: `請選擇要新增的領民。選單已排除宗主、長老、門徒與領民。\n目前共有 ${candidates.length} 位可新增成員。`,
-    components: adminCandidateSelect(candidates, page)
+    content: `請選擇要執行「${actionLabel(action)}」的玩家。${eligibilityText(action)}\n目前共有 ${candidates.length} 位符合資格。`,
+    components: adminCandidateSelect(action, candidates, page)
   };
 }
 
-async function handleAddSelection(interaction, env, actor) {
-  const result = await handleAddSelectionData(interaction, env, actor);
+async function rosterCandidates(env, action) {
+  const members = await listMembers(env);
+  const rows = await Promise.all(members.map(async member => ({
+    ...member,
+    account: ["bind", "promote"].includes(action) ? await getGameAccountByUser(env, GAME_IDS.WWM, member.userId) : null
+  })));
+  return rows.filter(member => {
+    if (action === "bind") return member.rank === RANK.RESIDENT && !member.account;
+    if (action === "promote") return member.rank === RANK.DISCIPLE && Boolean(member.account?.verified);
+    if (action === "demote") return [RANK.DISCIPLE, RANK.ELDER].includes(member.rank);
+    if (action === "view") return [RANK.MASTER, RANK.ELDER, RANK.DISCIPLE, RANK.RESIDENT].includes(member.rank);
+    if (action === "remove") return [RANK.ELDER, RANK.DISCIPLE, RANK.RESIDENT].includes(member.rank);
+    return false;
+  });
+}
+
+function eligibilityText(action) {
+  return ({
+    add: "選單已排除宗主、長老、門徒、領民與 Bot。",
+    bind: "只列出尚未綁定 UID 的領民。",
+    promote: "只列出已綁定 UID 的門徒。",
+    demote: "只列出目前為門徒或長老的成員。",
+    view: "只列出仙遊者名冊內成員。",
+    remove: "只列出可移出名冊的領民、門徒與長老。"
+  })[action] || "";
+}
+
+async function handleCandidateSelection(interaction, env, actor, action) {
+  const result = await handleCandidateSelectionData(interaction, env, actor, action);
   return updateMessageResponse(result);
 }
 
-async function handleAddSelectionData(interaction, env, actor) {
+async function handleCandidateSelectionData(interaction, env, actor, action) {
   const userId = String(interaction.data?.values?.[0] || "");
   if (!/^\d+$/.test(userId)) throw new Error("沒有選到有效玩家");
+  if (action !== "add") return handleRosterSelectionData(interaction, env, actor, action, userId);
   if (await getMember(env, userId)) throw new Error("該玩家已在仙遊者名冊中");
   const discordMember = await getGuildMember(interaction.guild_id, userId, env.DISCORD_BOT_TOKEN);
   if ((discordMember.roles || []).some(roleId => managedRoleIds(env).includes(String(roleId)))) {
@@ -155,8 +206,16 @@ async function handleAddSelectionData(interaction, env, actor) {
   return { content: `✅ 已新增領民：${result.member.displayName}`, components: [] };
 }
 
-async function handleSelection(interaction, env, actor, action) {
-  const target = selectedUser(interaction);
+async function handleRosterSelectionData(interaction, env, actor, action, userId) {
+  const member = await getMember(env, userId);
+  if (!member) throw new Error("找不到該仙遊者成員，請重新開啟選單");
+  const response = await handleSelection(interaction, env, actor, action, member);
+  const body = JSON.parse(await response.text());
+  return body.data || { content: "操作完成。", components: [] };
+}
+
+async function handleSelection(interaction, env, actor, action, selectedMember = null) {
+  const target = selectedMember ? { id: selectedMember.userId, username: selectedMember.username, displayName: selectedMember.displayName } : selectedUser(interaction);
   if (!target.id) throw new Error("沒有選到玩家");
   const sync = (userId, rank) => syncDiscordMemberRank(env, interaction.guild_id, userId, rank);
   if (action === "add") {

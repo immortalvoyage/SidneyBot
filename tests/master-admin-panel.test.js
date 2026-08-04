@@ -46,13 +46,28 @@ test("管理按鈕只允許宗主在指定私人頻道使用", async () => {
   assert.equal(elder.data.flags, 64);
 });
 
-test("宗主點主動綁定 UID 後取得 Discord 玩家選單", async () => {
+test("主動綁定 UID 選單只顯示尚未綁定的領民", async () => {
   const env = createEnv();
+  await upsertMember(env, { userId: "100", username: "resident", displayName: "待綁定領民", rank: RANK.RESIDENT });
+  await upsertMember(env, { userId: "101", username: "disciple", displayName: "夏之雪", rank: RANK.DISCIPLE });
   const result = await payload(await handleAdminInteraction(interaction("sidney:admin:v1:bind"), env));
   assert.equal(result.type, 4);
   assert.equal(result.data.flags, 64);
-  assert.equal(result.data.components[0].components[0].type, 5);
-  assert.equal(result.data.components[0].components[0].custom_id, "sidney:admin:v1:select:bind");
+  const menu = result.data.components[0].components[0];
+  assert.equal(menu.type, 3);
+  assert.equal(menu.custom_id, "sidney:admin:v1:select-candidate:bind:0");
+  assert.deepEqual(menu.options.map(option => option.value), ["100"]);
+  assert.ok(!menu.options.some(option => option.value === "101"));
+});
+
+test("選擇合格領民後可正常開啟 UID 綁定表單", async () => {
+  const env = createEnv();
+  await upsertMember(env, { userId: "100", username: "resident", displayName: "待綁定領民", rank: RANK.RESIDENT });
+  const selected = interaction("sidney:admin:v1:select-candidate:bind:0");
+  selected.data.values = ["100"];
+  const result = await payload(await handleAdminInteraction(selected, env, { waitUntil() { throw new Error("綁定選擇不可延遲，否則 Discord 無法開啟 Modal"); } }));
+  assert.equal(result.type, 9);
+  assert.equal(result.data.custom_id, "sidney:admin:v1:modal:bind:100");
 });
 
 test("新增領民選單排除已有仙遊者身分組、宗主與機器人", async () => {
@@ -73,6 +88,7 @@ test("新增領民選單排除已有仙遊者身分組、宗主與機器人", as
     const result = await payload(await handleAdminInteraction(interaction("sidney:admin:v1:add"), env));
     const menu = result.data.components[0].components[0];
     assert.equal(menu.type, 3);
+    assert.equal(menu.custom_id, "sidney:admin:v1:select-candidate:add:0");
     assert.deepEqual(menu.options.map(option => option.value), ["100"]);
     assert.match(result.data.content, /共有 1 位/);
   } finally {

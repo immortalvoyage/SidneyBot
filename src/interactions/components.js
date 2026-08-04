@@ -18,7 +18,7 @@ export function adminUserSelect(action) {
   return [{ type: 1, components: [{ type: 5, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:select:${action}`, placeholder: "選擇一位 Discord 玩家", min_values: 1, max_values: 1 }] }];
 }
 
-export function adminCandidateSelect(candidates, page = 0) {
+export function adminCandidateSelect(action, candidates, page = 0) {
   const pageSize = 25;
   const pageCount = Math.max(1, Math.ceil(candidates.length / pageSize));
   const safePage = Math.min(Math.max(Number(page) || 0, 0), pageCount - 1);
@@ -29,18 +29,29 @@ export function adminCandidateSelect(candidates, page = 0) {
   }));
   const rows = [{ type: 1, components: [{
     type: 3,
-    custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:select-add:${safePage}`,
-    placeholder: options.length ? "只顯示尚未加入仙遊者的成員" : "目前沒有可新增的成員",
+    custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:select-candidate:${action}:${safePage}`,
+    placeholder: options.length ? candidatePlaceholder(action) : "目前沒有符合資格的玩家",
     min_values: options.length ? 1 : 0,
     max_values: options.length ? 1 : 0,
-    options: options.length ? options : [{ label: "沒有可新增的成員", value: "none", description: "所有成員都已有仙遊者身分" }],
+    options: options.length ? options : [{ label: "沒有符合資格的玩家", value: "none", description: "請確認玩家目前身分與 UID 狀態" }],
     disabled: !options.length
   }] }];
   if (pageCount > 1) rows.push({ type: 1, components: [
-    { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:add-page:${safePage - 1}`, label: "上一頁", disabled: safePage === 0 },
-    { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:add-page:${safePage + 1}`, label: "下一頁", disabled: safePage >= pageCount - 1 }
+    { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:candidate-page:${action}:${safePage - 1}`, label: "上一頁", disabled: safePage === 0 },
+    { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:candidate-page:${action}:${safePage + 1}`, label: "下一頁", disabled: safePage >= pageCount - 1 }
   ] });
   return rows;
+}
+
+function candidatePlaceholder(action) {
+  return ({
+    add: "只顯示尚未加入仙遊者的成員",
+    bind: "只顯示未綁定 UID 的領民",
+    promote: "只顯示可晉升的門徒",
+    demote: "只顯示門徒與長老",
+    view: "選擇名冊內成員",
+    remove: "選擇可移出名冊的成員"
+  })[action] || "選擇符合資格的玩家";
 }
 
 export function adminUidModal(userId) {
