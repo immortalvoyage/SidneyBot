@@ -5,6 +5,7 @@ import { handleMemberAutocomplete } from "./src/commands/member-autocomplete.js"
 import { handleApplicationAutocomplete } from "./src/commands/application-autocomplete.js";
 import { handleGameBindingAutocomplete } from "./src/commands/game-binding-autocomplete.js";
 import { handleAuditAutocomplete } from "./src/commands/audit-autocomplete.js";
+import { handleRedeemCodeEvent } from "./src/integrations/redeem-codes.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -13,6 +14,10 @@ const APPLICATION_COMMAND_AUTOCOMPLETE = 4;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname === "/integrations/redeem-codes") {
+      return handleRedeemCodeEvent(request, env);
+    }
 
     const apiResponse = await handlePlatformApi(request, env, url);
     if (apiResponse) return apiResponse;
