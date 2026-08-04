@@ -70,3 +70,31 @@ test("invalid signature and expired timestamp are rejected", async () => {
   const old = String(Math.floor(Date.now() / 1000) - 1000);
   assert.equal((await handleRedeemCodeEvent(await requestFor(secret, { codes: ["TEST"] }, "old-batch", old), env)).status, 401);
 });
+
+test("signed connection test sends a non-code message as Laozu", async () => {
+  const originalFetch = globalThis.fetch;
+  const messages = [];
+  globalThis.fetch = async (_url, options) => {
+    messages.push(JSON.parse(options.body));
+    return new Response("{}", { status: 200 });
+  };
+
+  try {
+    const secret = "connection-test-secret-at-least-32-characters";
+    const env = {
+      BOT_MEMORY: makeKv(), REDEEM_TRACKER_SECRET: secret,
+      DISCORD_BOT_TOKEN: "test-token", REDEEM_CODE_CHANNEL_ID: "1234567890"
+    };
+    const response = await handleRedeemCodeEvent(
+      await requestFor(secret, { type: "connection_test", source: "wwm-redeem-code-tracker" }, "connection-test-1"),
+      env
+    );
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true, connectionTest: true });
+    assert.equal(messages.length, 1);
+    assert.match(messages[0].content, /老祖連線測試成功/);
+    assert.match(messages[0].content, /不是新兌換碼公告/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

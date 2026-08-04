@@ -1,4 +1,4 @@
-Sidney Platform V1.0－仙遊者 Discord Bot v4.3.3
+Sidney Platform V1.0－仙遊者 Discord Bot v4.3.5
 
 請覆蓋專案根目錄中的：
 - gemini.js

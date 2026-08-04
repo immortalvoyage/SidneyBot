@@ -33,6 +33,11 @@ export async function handleRedeemCodeEvent(request, env) {
     return json({ error: "invalid_json" }, 400);
   }
 
+  if (payload && payload.type === "connection_test") {
+    await publishConnectionTestAsLaozu(env);
+    return json({ ok: true, connectionTest: true });
+  }
+
   const codes = normalizeCodes(payload.codes);
   if (!codes.length) return json({ error: "codes_required" }, 400);
 
@@ -52,6 +57,25 @@ export async function handleRedeemCodeEvent(request, env) {
   });
 
   return json({ ok: true, announced: codes.length });
+}
+
+async function publishConnectionTestAsLaozu(env) {
+  const token = String(env.DISCORD_BOT_TOKEN || "");
+  const channelId = String(env.REDEEM_CODE_CHANNEL_ID || "");
+  if (!token || !/^\d+$/.test(channelId)) throw new Error("兌換碼公告頻道或 Bot Token 尚未設定");
+
+  const content = [
+    "## ☯ 老祖連線測試成功",
+    "Sidney Worker 已通過簽章驗證，並成功以老祖身分連接兌換碼公告頻道。",
+    "這是系統測試訊息，不是新兌換碼公告。"
+  ].join("\n");
+
+  const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ content, allowed_mentions: { parse: [] } })
+  });
+  if (!response.ok) throw new Error(`Discord 測試訊息發送失敗：HTTP ${response.status}`);
 }
 
 function normalizeCodes(values) {
