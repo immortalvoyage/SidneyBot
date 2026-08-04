@@ -18,6 +18,20 @@ export async function getPlayerState(env, userId) {
   return stored ? normalizePlayerState(stored) : null;
 }
 
+export function formatPlayerStateSummary(input) {
+  if (!input) return "尚未建立萬象錄資料。";
+
+  const state = normalizePlayerState(input);
+  return [
+    `好感：${state.relationship.favor}`,
+    `信任：${state.relationship.trust}`,
+    `連續請安：${state.greeting.currentStreak} 天`,
+    `累計請安：${state.greeting.totalDays} 天`,
+    `最長連續：${state.greeting.longestStreak} 天`,
+    `上次請安：${state.greeting.lastDate || "尚未請安"}`
+  ].join("\n");
+}
+
 export async function savePlayerState(env, state) {
   const normalized = normalizePlayerState(state);
   if (!normalized.userId) throw new Error("playerState userId 不可為空");

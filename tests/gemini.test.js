@@ -24,7 +24,7 @@ function okResponse(answer = "測試回答") {
   };
 }
 
-async function capturePrompt(member) {
+async function capturePrompt(member, playerState = null) {
   const originalFetch = globalThis.fetch;
   let requestBody = null;
 
@@ -43,7 +43,8 @@ async function capturePrompt(member) {
       },
       [],
       {},
-      member
+      member,
+      playerState
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -51,6 +52,49 @@ async function capturePrompt(member) {
 
   return requestBody.systemInstruction.parts[0].text;
 }
+
+test("萬象錄關係與請安摘要會傳入老祖 Prompt", async () => {
+  const prompt = await capturePrompt(
+    {
+      userId: "123",
+      displayName: "測試成員",
+      rank: "resident",
+      active: true
+    },
+    {
+      userId: "123",
+      relationship: {
+        favor: 81,
+        trust: 67,
+        grudge: 3
+      },
+      greeting: {
+        currentStreak: 7,
+        longestStreak: 9,
+        totalDays: 20,
+        lastDate: "2026-08-04"
+      }
+    }
+  );
+
+  assert.match(prompt, /宗門身份：領民/);
+  assert.match(prompt, /好感：81/);
+  assert.match(prompt, /信任：67/);
+  assert.match(prompt, /目前連續請安：7 天/);
+  assert.match(prompt, /不得自行更改分數/);
+});
+
+test("沒有萬象錄資料時禁止老祖猜測關係狀態", async () => {
+  const prompt = await capturePrompt({
+    userId: "123",
+    displayName: "測試成員",
+    rank: "resident",
+    active: true
+  });
+
+  assert.match(prompt, /目前沒有可用的萬象錄資料/);
+  assert.match(prompt, /不得自行猜測好感、信任、請安紀錄/);
+});
 
 for (const [rank, expectedLabel] of [
   ["master", "宗主"],

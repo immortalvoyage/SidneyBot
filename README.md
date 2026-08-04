@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.8
+# ☯【仙遊者】☯ Discord AI Bot V4.3.9
 
 完整獨立版，使用：
 
@@ -182,3 +182,7 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 本版新增老祖每日請安面板與入宗審核按鈕。玩家每日只需點擊「向老祖請安」；宗主或長老可在指定頻道執行一次 `/panel` 或 `/面板` 建立長期面板。新入宗申請會自動送至既有審核頻道並附上「同意入宗」與「拒絕申請」按鈕，原 `/review`／`/審核` 保留作為備援。
 
 部署本版前必須設定 `DISCORD_RESIDENT_ROLE_ID`，並重新執行 `npm run register` 後再執行 `npm run deploy`。不需新增或修改任何 Secret。
+
+# SidneyBot v4.3.9 萬象錄對話整合
+
+老祖對話現在會讀取程式實際保存的好感、信任、記仇與每日請安摘要。這些資料只影響語氣與互動意願，AI 不得自行修改分數、捏造原因或繞過宗門權限。`/profile view`／`/個人資料 查看` 亦會顯示本人可見的好感、信任與請安摘要。

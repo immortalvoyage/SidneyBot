@@ -36,6 +36,7 @@ import {
 } from "./src/sect/permissions.js";
 
 import { RANK_LABEL } from "./src/sect/constants.js";
+import { getPlayerState } from "./src/platform/player-state-storage.js";
 
 import { handleApply } from "./src/commands/apply.js";
 import { handleReview } from "./src/commands/review.js";
@@ -259,9 +260,10 @@ async function processAsk(
       rank: member.rank
     });
 
-    const [history, profile] = await Promise.all([
+    const [history, profile, playerState] = await Promise.all([
       loadMemory(env, guildId, userId),
-      loadProfile(env, guildId, userId)
+      loadProfile(env, guildId, userId),
+      getPlayerState(env, userId)
     ]);
 
     const answer = await askGemini(
@@ -269,7 +271,8 @@ async function processAsk(
       env,
       history,
       profile,
-      member
+      member,
+      playerState
     );
 
     await saveMemory(

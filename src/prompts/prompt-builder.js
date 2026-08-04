@@ -4,6 +4,7 @@
  */
 
 import { LAOZU_BASE_PROMPT } from "./laozu.js";
+import { normalizePlayerState, relationshipTier } from "../platform/player-state.js";
 
 /**
  * 清理將要放進 Prompt 的文字。
@@ -108,6 +109,42 @@ function buildProfileContext(profile) {
 `;
 }
 
+function buildPlayerStateContext(playerState) {
+  if (!playerState) {
+    return `
+【萬象錄關係摘要】
+
+目前沒有可用的萬象錄資料。
+不得自行猜測好感、信任、請安紀錄或關係階段。
+`;
+  }
+
+  const state = normalizePlayerState(playerState);
+  const tierNames = {
+    cherished: "珍視",
+    warm: "親近",
+    normal: "平常",
+    cold: "冷淡",
+    refuse_optional: "拒絕非必要互動"
+  };
+  const tier = relationshipTier(state.relationship);
+
+  return `
+【萬象錄關係摘要】
+
+好感：${state.relationship.favor}
+信任：${state.relationship.trust}
+記仇：${state.relationship.grudge}
+互動階段：${tierNames[tier] || tier}
+目前連續請安：${state.greeting.currentStreak} 天
+累計請安：${state.greeting.totalDays} 天
+上次請安：${state.greeting.lastDate || "尚未請安"}
+
+這些數值只用於調整語氣與互動意願。
+不得自行更改分數、捏造原因，亦不得讓好感凌駕權限、事實或宗門規則。
+`;
+}
+
 /**
  * 建立最近對話摘要。
  */
@@ -163,6 +200,7 @@ ${context}
 export function buildLaozuSystemPrompt({
   member = null,
   profile = null,
+  playerState = null,
   historySummary = "",
   sectContext = ""
 } = {}) {
@@ -170,6 +208,7 @@ export function buildLaozuSystemPrompt({
     LAOZU_BASE_PROMPT,
     buildMemberContext(member),
     buildProfileContext(profile),
+    buildPlayerStateContext(playerState),
     buildHistoryContext(historySummary),
     buildSectContext(sectContext)
   ].join("\n\n");

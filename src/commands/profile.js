@@ -14,6 +14,10 @@ import {
   resolveActor,
   setOwnDisplayName
 } from "../sect/service.js";
+import {
+  getPlayerState,
+  formatPlayerStateSummary
+} from "../platform/player-state-storage.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -64,9 +68,10 @@ export async function handleProfile(interaction, env) {
     );
   }
 
-  const [profile, member] = await Promise.all([
+  const [profile, member, playerState] = await Promise.all([
     loadProfile(env, guildId, user.id),
-    getMember(env, user.id)
+    getMember(env, user.id),
+    getPlayerState(env, user.id)
   ]);
 
   return immediateResponse(
@@ -75,7 +80,10 @@ export async function handleProfile(interaction, env) {
       formatProfile(profile),
       "",
       "## 宗門資料",
-      formatMember(member)
+      formatMember(member),
+      "",
+      "## 萬象錄",
+      formatPlayerStateSummary(playerState)
     ].join("\n"),
     true
   );

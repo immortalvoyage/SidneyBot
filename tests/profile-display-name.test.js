@@ -128,7 +128,7 @@ test("相同名稱不重複寫入 Audit", async () => {
   assert.deepEqual(await listAudits(env), []);
 });
 
-test("profile view 仍可查看更新後的宗門名稱", async () => {
+test("profile view 可查看宗門名稱與本人萬象錄摘要", async () => {
   const env = createEnv();
   await upsertMember(env, {
     userId: "member-1",
@@ -140,4 +140,8 @@ test("profile view 仍可查看更新後的宗門名稱", async () => {
     await handleCommand(interaction("member-1", "view"), env, {})
   );
   assert.match(content, /名稱：凜冬皓月/);
+  assert.match(content, /## 萬象錄/);
+  assert.match(content, /好感：50/);
+  assert.match(content, /信任：50/);
+  assert.match(content, /累計請安：0 天/);
 });
