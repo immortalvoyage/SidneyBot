@@ -13,6 +13,7 @@ import {
 
 import { isSectMaster } from "./permissions.js";
 import { nowIso } from "../../utils.js";
+import { ensurePlayerState } from "../platform/player-state-storage.js";
 
 export async function ensureMaster(env, user = {}) {
   const userId = String(user.id || "");
@@ -81,6 +82,7 @@ export async function upsertMember(env, member) {
 
   await kvPut(env, KV.MEMBER(userId), next);
   await appendUnique(env, KV.MEMBER_INDEX, userId);
+  await ensurePlayerState(env, next);
 
   return next;
 }
