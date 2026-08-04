@@ -25,7 +25,7 @@ export async function handleApplicationAutocomplete(interaction, env) {
   const focused = focusedOption(interaction);
 
   if (
-    !["approve", "reject"].includes(command) ||
+    command !== "review" ||
     focused?.name !== "applicant"
   ) {
     return autocompleteResponse([]);

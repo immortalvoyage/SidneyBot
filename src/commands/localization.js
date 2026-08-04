@@ -1,8 +1,7 @@
 const ENGLISH_TO_CHINESE = Object.freeze({
   ai: "詢問",
   apply: "申請",
-  approve: "批准",
-  reject: "拒絕",
+  review: "審核",
   members: "名冊",
   member: "成員",
   sect: "仙遊者",
@@ -15,6 +14,7 @@ const ENGLISH_TO_CHINESE = Object.freeze({
   question: "問題",
   reason: "理由",
   applicant: "申請者",
+  decision: "決定",
   note: "備註",
   page: "頁碼",
   get: "查看",

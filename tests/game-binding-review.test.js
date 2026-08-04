@@ -31,7 +31,7 @@ function createEnv(masterId = "master-1") {
   };
 }
 
-function autocompleteInteraction({ actorId = "master-1", action = "approve", value = "" } = {}) {
+function autocompleteInteraction({ actorId = "master-1", action = "review", value = "" } = {}) {
   return {
     member: { user: { id: actorId, username: actorId } },
     data: {
@@ -52,7 +52,7 @@ function commandInteraction(targetUserId) {
     data: {
       name: "game",
       options: [{
-        name: "approve",
+        name: "review",
         type: 1,
         options: [{ name: "applicant", type: 3, value: targetUserId }]
       }]

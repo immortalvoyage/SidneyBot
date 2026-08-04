@@ -30,7 +30,7 @@ export async function handleGameBindingAutocomplete(interaction, env) {
   const focused = focusedOption(interaction);
 
   if (
-    !["approve", "reject"].includes(subcommand?.name) ||
+    subcommand?.name !== "review" ||
     focused?.name !== "applicant"
   ) {
     return autocompleteResponse([]);

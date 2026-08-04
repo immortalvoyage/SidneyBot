@@ -52,3 +52,32 @@ test("leaves English interactions unchanged", () => {
   const interaction = { data: { name: "help" } };
   assert.equal(normalizeChineseInteraction(interaction), interaction);
 });
+
+test("localizes and normalizes the unified review command", () => {
+  const english = [{
+    name: "review",
+    description: "review",
+    options: [
+      { name: "applicant", description: "applicant", type: 3 },
+      { name: "decision", description: "decision", type: 3 }
+    ]
+  }];
+  const [chinese] = createChineseCommands(english);
+
+  assert.equal(chinese.name, "審核");
+  assert.equal(chinese.options[0].name, "申請者");
+  assert.equal(chinese.options[1].name, "決定");
+
+  const normalized = normalizeChineseInteraction({
+    data: {
+      name: "審核",
+      options: [
+        { name: "申請者", value: "player-1" },
+        { name: "決定", value: "approve" }
+      ]
+    }
+  });
+  assert.equal(normalized.data.name, "review");
+  assert.equal(normalized.data.options[0].name, "applicant");
+  assert.equal(normalized.data.options[1].name, "decision");
+});

@@ -36,8 +36,8 @@ const ENGLISH_COMMANDS = [
     ]
   },
   {
-    name: "approve",
-    description: "私密批准入宗申請（宗主／長老）",
+    name: "review",
+    description: "私密審核入宗申請（宗主／長老）",
     options: [
       {
         name: "applicant",
@@ -47,28 +47,18 @@ const ENGLISH_COMMANDS = [
         autocomplete: true
       },
       {
-        name: "note",
-        description: "審核備註",
-        type: 3,
-        required: false,
-        max_length: 500
-      }
-    ]
-  },
-  {
-    name: "reject",
-    description: "私密拒絕入宗申請（宗主／長老）",
-    options: [
-      {
-        name: "applicant",
-        description: "從待審入宗申請搜尋玩家",
+        name: "decision",
+        description: "選擇核准或拒絕",
         type: 3,
         required: true,
-        autocomplete: true
+        choices: [
+          { name: "核准", value: "approve" },
+          { name: "拒絕", value: "reject" }
+        ]
       },
       {
         name: "note",
-        description: "拒絕原因或備註",
+        description: "審核原因或備註",
         type: 3,
         required: false,
         max_length: 500
@@ -183,21 +173,22 @@ const ENGLISH_COMMANDS = [
       { name: "status", description: "查看自己的燕雲角色綁定", type: 1 },
       { name: "pending", description: "查看待審 UID 綁定（宗主／長老）", type: 1 },
       {
-        name: "approve",
-        description: "核准 UID 綁定（宗主／長老）",
+        name: "review",
+        description: "審核 UID 綁定（宗主／長老）",
         type: 1,
         options: [
           { name: "applicant", description: "從 KV 待審綁定搜尋申請者", type: 3, required: true, autocomplete: true },
-          { name: "note", description: "審核備註", type: 3, required: false, max_length: 300 }
-        ]
-      },
-      {
-        name: "reject",
-        description: "拒絕 UID 綁定（宗主／長老）",
-        type: 1,
-        options: [
-          { name: "applicant", description: "從 KV 待審綁定搜尋申請者", type: 3, required: true, autocomplete: true },
-          { name: "note", description: "拒絕原因", type: 3, required: false, max_length: 300 }
+          {
+            name: "decision",
+            description: "選擇核准或拒絕",
+            type: 3,
+            required: true,
+            choices: [
+              { name: "核准", value: "approve" },
+              { name: "拒絕", value: "reject" }
+            ]
+          },
+          { name: "note", description: "審核原因或備註", type: 3, required: false, max_length: 300 }
         ]
       }
     ]

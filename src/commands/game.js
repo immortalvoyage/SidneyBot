@@ -81,40 +81,38 @@ export async function handleGame(interaction, env) {
     ].join("\n"), true);
   }
 
-  if (action === "approve") {
+  if (action === "review") {
     const targetUserId = String(subOption(interaction, "applicant") || "");
-    const targetMember = await getMember(env, targetUserId);
-    if (!targetMember || !canUseAI(targetMember.rank)) {
-      return immediateResponse("❌ 該申請者目前不是仙遊者正式成員，不能核准綁定。", true);
-    }
-    const account = await approveGameBinding(env, {
-      gameId: GAME_IDS.WWM,
-      userId: targetUserId,
-      reviewerId: userId,
-      note: subOption(interaction, "note") || ""
-    });
-    return immediateResponse(
-      `✅ 已核准 UID ${account.uid} 綁定至 Discord ID ${account.userId}。`,
-      true
-    );
-  }
-
-  if (action === "reject") {
-    const targetUserId = String(subOption(interaction, "applicant") || "");
+    const decision = String(subOption(interaction, "decision") || "");
     const targetMember = await getMember(env, targetUserId);
     if (!targetMember || !canUseAI(targetMember.rank)) {
       return immediateResponse("❌ 該申請者目前不是仙遊者正式成員，不能處理綁定。", true);
     }
-    const record = await rejectGameBinding(env, {
-      gameId: GAME_IDS.WWM,
-      userId: targetUserId,
-      reviewerId: userId,
-      note: subOption(interaction, "note") || ""
-    });
-    return immediateResponse(
-      `✅ 已拒絕 ${record.discordName || record.userId} 的 UID 綁定申請。`,
-      true
-    );
+    if (decision === "approve") {
+      const account = await approveGameBinding(env, {
+        gameId: GAME_IDS.WWM,
+        userId: targetUserId,
+        reviewerId: userId,
+        note: subOption(interaction, "note") || ""
+      });
+      return immediateResponse(
+        `✅ 已核准 UID ${account.uid} 綁定至 Discord ID ${account.userId}。`,
+        true
+      );
+    }
+    if (decision === "reject") {
+      const record = await rejectGameBinding(env, {
+        gameId: GAME_IDS.WWM,
+        userId: targetUserId,
+        reviewerId: userId,
+        note: subOption(interaction, "note") || ""
+      });
+      return immediateResponse(
+        `✅ 已拒絕 ${record.discordName || record.userId} 的 UID 綁定申請。`,
+        true
+      );
+    }
+    return immediateResponse("❌ 請選擇核准或拒絕。", true);
   }
 
   return immediateResponse("❌ 不支援的 /game 子指令。", true);

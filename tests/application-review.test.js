@@ -29,7 +29,7 @@ function createEnv(masterId = "master-1") {
   };
 }
 
-function interaction({ actorId = "master-1", command = "approve", value = "" } = {}) {
+function interaction({ actorId = "master-1", command = "review", value = "" } = {}) {
   return {
     member: {
       user: {

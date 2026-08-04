@@ -89,7 +89,7 @@ async function notifyReviewChannel(env, application) {
         `申請理由：${application.reason || "未填寫"}`,
         `申請時間：${application.createdAt}`,
         "",
-        "請使用 `/approve applicant:<申請者>` 或 `/reject applicant:<申請者>` 審核。"
+        "請使用 `/review applicant:<申請者> decision:<核准／拒絕>` 審核。"
       ].join("\n")
     );
   } catch (error) {

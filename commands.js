@@ -38,8 +38,7 @@ import {
 import { RANK_LABEL } from "./src/sect/constants.js";
 
 import { handleApply } from "./src/commands/apply.js";
-import { handleApprove } from "./src/commands/approve.js";
-import { handleReject } from "./src/commands/reject.js";
+import { handleReview } from "./src/commands/review.js";
 import { handleMembers } from "./src/commands/members.js";
 import { handleMember } from "./src/commands/member.js";
 import { handleSect } from "./src/commands/sect.js";
@@ -64,11 +63,8 @@ export async function handleCommand(
       case "apply":
         return await handleApply(interaction, env, ctx);
 
-      case "approve":
-        return await handleApprove(interaction, env, ctx);
-
-      case "reject":
-        return await handleReject(interaction, env);
+      case "review":
+        return await handleReview(interaction, env, ctx);
 
       case "members":
         return await handleMembers(interaction, env);
@@ -151,11 +147,9 @@ async function handleHelp(interaction, env) {
     lines.push(
       "",
       "### 審核指令",
-      "`/approve applicant:<待審申請者>`：批准加入仙遊者",
-      "`/reject applicant:<待審申請者>`：拒絕加入仙遊者",
+      "`/review applicant:<待審申請者> decision:<核准／拒絕>`：審核加入仙遊者",
       "`/game pending`：查看待審 UID 綁定",
-      "`/game approve applicant:<待審綁定>`：核准 UID 綁定",
-      "`/game reject applicant:<待審綁定>`：拒絕 UID 綁定"
+      "`/game review applicant:<待審綁定> decision:<核准／拒絕>`：審核 UID 綁定"
     );
   }
 

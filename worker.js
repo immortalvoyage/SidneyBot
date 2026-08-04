@@ -66,7 +66,7 @@ export default {
     interaction = normalizeChineseInteraction(interaction);
 
     if (interaction.type === APPLICATION_COMMAND_AUTOCOMPLETE) {
-      if (["approve", "reject"].includes(interaction.data?.name)) {
+      if (interaction.data?.name === "review") {
         return handleApplicationAutocomplete(interaction, env);
       }
       if (interaction.data?.name === "game") {
