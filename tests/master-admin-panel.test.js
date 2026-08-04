@@ -11,6 +11,10 @@ function createEnv() {
   return {
     SECT_MASTER_ID: "master-1",
     MASTER_ADMIN_CHANNEL_ID: "1534238116099919933",
+    DISCORD_BOT_TOKEN: "test-token",
+    DISCORD_RESIDENT_ROLE_ID: "role-resident",
+    DISCORD_DISCIPLE_ROLE_ID: "role-disciple",
+    DISCORD_ELDER_ROLE_ID: "role-elder",
     BOT_MEMORY: {
       async get(key) { const value = values.get(key); return value === undefined ? null : JSON.parse(value); },
       async put(key, value) { values.set(key, value); },
@@ -49,4 +53,29 @@ test("宗主點主動綁定 UID 後取得 Discord 玩家選單", async () => {
   assert.equal(result.data.flags, 64);
   assert.equal(result.data.components[0].components[0].type, 5);
   assert.equal(result.data.components[0].components[0].custom_id, "sidney:admin:v1:select:bind");
+});
+
+test("新增領民選單排除已有仙遊者身分組、宗主與機器人", async () => {
+  const env = createEnv();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    assert.match(String(url), /\/guilds\/guild-1\/members\?/);
+    return new Response(JSON.stringify([
+      { user: { id: "100", username: "new-player", global_name: "新玩家" }, roles: [] },
+      { user: { id: "101", username: "resident" }, roles: ["role-resident"] },
+      { user: { id: "102", username: "disciple" }, roles: ["role-disciple"] },
+      { user: { id: "103", username: "elder" }, roles: ["role-elder"] },
+      { user: { id: "master-1", username: "master" }, roles: [] },
+      { user: { id: "104", username: "bot", bot: true }, roles: [] }
+    ]), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    const result = await payload(await handleAdminInteraction(interaction("sidney:admin:v1:add"), env));
+    const menu = result.data.components[0].components[0];
+    assert.equal(menu.type, 3);
+    assert.deepEqual(menu.options.map(option => option.value), ["100"]);
+    assert.match(result.data.content, /共有 1 位/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

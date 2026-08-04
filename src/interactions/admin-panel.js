@@ -1,4 +1,4 @@
-import { componentResponse, immediateResponse, modalResponse, updateMessageResponse } from "../../discord.js";
+import { componentResponse, deferredResponse, editOriginalResponse, getGuildMember, immediateResponse, listGuildMembers, modalResponse, updateMessageResponse } from "../../discord.js";
 import { getUser } from "../../utils.js";
 import { getMember } from "../sect/members.js";
 import { isSectMaster } from "../sect/permissions.js";
@@ -9,7 +9,7 @@ import { GAME_IDS } from "../platform/games/constants.js";
 import { approveGameBinding, getGameAccountByUser, requestGameBinding } from "../platform/games/service.js";
 import { listAudits } from "../sect/audit.js";
 import { notifyMember } from "../sect/notifications.js";
-import { adminRemoveConfirmComponents, adminUidModal, adminUserSelect, COMPONENT_IDS, masterAdminPanelComponents } from "./components.js";
+import { adminCandidateSelect, adminRemoveConfirmComponents, adminUidModal, adminUserSelect, COMPONENT_IDS, masterAdminPanelComponents } from "./components.js";
 
 const PREFIX = `${COMPONENT_IDS.ADMIN_PREFIX}:`;
 
@@ -39,22 +39,99 @@ export function isAdminInteraction(customId) {
   return String(customId || "").startsWith(PREFIX);
 }
 
-export async function handleAdminInteraction(interaction, env) {
+export async function handleAdminInteraction(interaction, env, ctx) {
   const customId = String(interaction.data?.custom_id || "");
+  const earlyKey = customId.slice(PREFIX.length);
+  if (ctx?.waitUntil && (earlyKey === "add" || earlyKey.startsWith("add-page:") || earlyKey.startsWith("select-add:"))) {
+    return runDeferredAdmin(interaction, env, ctx, earlyKey);
+  }
   try {
     const actor = await requireMaster(interaction, env);
     const key = customId.slice(PREFIX.length);
-    if (["add", "bind", "promote", "demote", "view", "remove"].includes(key)) return componentResponse(`請選擇要執行「${actionLabel(key)}」的玩家。`, adminUserSelect(key), true);
+    if (key === "add") return addCandidateResponse(interaction, env, 0);
+    if (key.startsWith("add-page:")) return addCandidateResponse(interaction, env, key.slice(9), true);
+    if (["bind", "promote", "demote", "view", "remove"].includes(key)) return componentResponse(`請選擇要執行「${actionLabel(key)}」的玩家。`, adminUserSelect(key), true);
     if (key === "audit") return recentAudit(env);
     if (key === "refresh") return updateMessageResponse({ content: "☯ **仙遊者・宗主管理面板**\n面板已重新整理。所有操作都會驗證宗主身分並留下紀錄。", components: masterAdminPanelComponents() });
     if (key === "cancel") return updateMessageResponse({ content: "已取消操作。", components: [] });
     if (key.startsWith("select:")) return handleSelection(interaction, env, actor, key.slice(7));
+    if (key.startsWith("select-add:")) return handleAddSelection(interaction, env, actor);
     if (key.startsWith("modal:bind:")) return handleBindModal(interaction, env, actor, key.slice(11));
     if (key.startsWith("confirm-remove:")) return handleRemove(interaction, env, actor, key.slice(15));
     return immediateResponse("❌ 這個管理操作已失效，請重新點選面板。", true);
   } catch (error) {
     return immediateResponse(`❌ ${error.message || "宗主管理操作失敗"}`, true);
   }
+}
+
+function runDeferredAdmin(interaction, env, ctx, key) {
+  ctx.waitUntil((async () => {
+    try {
+      const actor = await requireMaster(interaction, env);
+      let result;
+      if (key === "add") result = await addCandidateData(interaction, env, 0);
+      else if (key.startsWith("add-page:")) result = await addCandidateData(interaction, env, key.slice(9));
+      else result = await handleAddSelectionData(interaction, env, actor);
+      await editOriginalResponse(interaction.application_id, interaction.token, result.content, { components: result.components || [] });
+    } catch (error) {
+      await editOriginalResponse(interaction.application_id, interaction.token, `❌ ${error.message || "宗主管理操作失敗"}`, { components: [] });
+    }
+  })());
+  return deferredResponse(true);
+}
+
+function managedRoleIds(env) {
+  return [env.DISCORD_RESIDENT_ROLE_ID, env.DISCORD_DISCIPLE_ROLE_ID, env.DISCORD_ELDER_ROLE_ID]
+    .map(value => String(value || "").trim()).filter(Boolean);
+}
+
+async function addCandidates(interaction, env) {
+  const excludedRoles = new Set(managedRoleIds(env));
+  const rows = await listGuildMembers(interaction.guild_id, env.DISCORD_BOT_TOKEN);
+  return rows
+    .filter(member => member?.user?.id && !member.user.bot)
+    .filter(member => String(member.user.id) !== String(env.SECT_MASTER_ID || ""))
+    .filter(member => !(member.roles || []).some(roleId => excludedRoles.has(String(roleId))))
+    .map(member => ({
+      userId: String(member.user.id),
+      username: member.user.username || "unknown",
+      displayName: member.nick || member.user.global_name || member.user.username || "unknown"
+    }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, "zh-Hant"));
+}
+
+async function addCandidateResponse(interaction, env, page = 0, update = false) {
+  const data = await addCandidateData(interaction, env, page);
+  return update ? updateMessageResponse(data) : componentResponse(data.content, data.components, true);
+}
+
+async function addCandidateData(interaction, env, page = 0) {
+  const candidates = await addCandidates(interaction, env);
+  return {
+    content: `請選擇要新增的領民。選單已排除宗主、長老、門徒與領民。\n目前共有 ${candidates.length} 位可新增成員。`,
+    components: adminCandidateSelect(candidates, page)
+  };
+}
+
+async function handleAddSelection(interaction, env, actor) {
+  const result = await handleAddSelectionData(interaction, env, actor);
+  return updateMessageResponse(result);
+}
+
+async function handleAddSelectionData(interaction, env, actor) {
+  const userId = String(interaction.data?.values?.[0] || "");
+  if (!/^\d+$/.test(userId)) throw new Error("沒有選到有效玩家");
+  if (await getMember(env, userId)) throw new Error("該玩家已在仙遊者名冊中");
+  const discordMember = await getGuildMember(interaction.guild_id, userId, env.DISCORD_BOT_TOKEN);
+  if ((discordMember.roles || []).some(roleId => managedRoleIds(env).includes(String(roleId)))) {
+    throw new Error("該玩家已有仙遊者身分組，不能重複新增");
+  }
+  const user = discordMember.user || {};
+  const target = { id: userId, username: user.username || "unknown", globalName: user.global_name || "", displayName: discordMember.nick || user.global_name || user.username || "unknown" };
+  const result = await enrollMemberByMaster(env, actor, target, RANK.RESIDENT, "由宗主管理面板新增領民", (id, rank) => syncDiscordMemberRank(env, interaction.guild_id, id, rank));
+  if (!result.created) throw new Error("該玩家已在仙遊者名冊中");
+  await notifyMember(env, { userId, actorId: actor.userId, event: "member.enrolled_by_master_panel", content: "✅ 宗主已將你加入仙遊者。\n身分：領民\n下一步可使用 `/game bind` 申請綁定 UID。" });
+  return { content: `✅ 已新增領民：${result.member.displayName}`, components: [] };
 }
 
 async function handleSelection(interaction, env, actor, action) {

@@ -183,6 +183,31 @@ export async function getGuildMember(guildId, userId, botToken) {
   return response.json();
 }
 
+export async function listGuildMembers(guildId, botToken, limit = 1000) {
+  const normalizedGuildId = String(guildId || "").trim();
+  const normalizedToken = String(botToken || "").trim();
+  const pageSize = Math.min(Math.max(Number(limit) || 1000, 1), 1000);
+  if (!normalizedGuildId || !normalizedToken) {
+    throw new Error("缺少 Discord 伺服器或 Bot Token 設定");
+  }
+
+  const members = [];
+  let after = "0";
+  for (let page = 0; page < 10; page += 1) {
+    const response = await discordFetch(
+      `${DISCORD_API}/guilds/${normalizedGuildId}/members?limit=${pageSize}&after=${after}`,
+      { headers: { Authorization: `Bot ${normalizedToken}` } }
+    );
+    const rows = await response.json();
+    if (!Array.isArray(rows)) throw new Error("Discord 未回傳成員名單");
+    members.push(...rows);
+    if (rows.length < pageSize) break;
+    after = String(rows.at(-1)?.user?.id || "");
+    if (!after) break;
+  }
+  return members;
+}
+
 async function discordFetch(url, init, attempts = 3) {
   let lastError;
 
@@ -226,11 +251,7 @@ async function discordFetch(url, init, attempts = 3) {
   throw lastError || new Error("Discord API 呼叫失敗");
 }
 
-export async function editOriginalResponse(
-  applicationId,
-  token,
-  content
-) {
+export async function editOriginalResponse(applicationId, token, content, options = {}) {
   const url =
     `${DISCORD_API}/webhooks/${applicationId}/${token}/messages/@original`;
 
@@ -241,6 +262,7 @@ export async function editOriginalResponse(
     },
     body: JSON.stringify({
       content: String(content || ""),
+      ...(Array.isArray(options.components) ? { components: options.components } : {}),
       allowed_mentions: { parse: [] }
     })
   });

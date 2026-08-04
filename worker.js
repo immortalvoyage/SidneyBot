@@ -29,7 +29,7 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(
-        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.13"} is running.`
+        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.14"} is running.`
       );
     }
 
@@ -70,11 +70,11 @@ export default {
     interaction = normalizeChineseInteraction(interaction);
 
     if (interaction.type === MESSAGE_COMPONENT) {
-      return handleButton(interaction, env);
+      return handleButton(interaction, env, ctx);
     }
     if (interaction.type === MODAL_SUBMIT) {
       const customId = String(interaction.data?.custom_id || "");
-      if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env);
+      if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env, ctx);
       return json({ type: 4, data: { content: "❌ 這個表單已失效。", flags: 64 } });
     }
 

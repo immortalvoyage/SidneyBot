@@ -23,9 +23,9 @@ import {
 } from "./components.js";
 import { handleAdminInteraction, isAdminInteraction } from "./admin-panel.js";
 
-export async function handleButton(interaction, env) {
+export async function handleButton(interaction, env, ctx) {
   const customId = String(interaction.data?.custom_id || "");
-  if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env);
+  if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env, ctx);
   if (customId === COMPONENT_IDS.DAILY_GREETING) {
     return handleDailyGreeting(interaction, env);
   }

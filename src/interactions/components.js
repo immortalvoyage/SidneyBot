@@ -18,6 +18,31 @@ export function adminUserSelect(action) {
   return [{ type: 1, components: [{ type: 5, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:select:${action}`, placeholder: "選擇一位 Discord 玩家", min_values: 1, max_values: 1 }] }];
 }
 
+export function adminCandidateSelect(candidates, page = 0) {
+  const pageSize = 25;
+  const pageCount = Math.max(1, Math.ceil(candidates.length / pageSize));
+  const safePage = Math.min(Math.max(Number(page) || 0, 0), pageCount - 1);
+  const options = candidates.slice(safePage * pageSize, (safePage + 1) * pageSize).map(member => ({
+    label: String(member.displayName || member.username || member.userId).slice(0, 100),
+    description: String(`@${member.username || "unknown"}`).slice(0, 100),
+    value: String(member.userId)
+  }));
+  const rows = [{ type: 1, components: [{
+    type: 3,
+    custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:select-add:${safePage}`,
+    placeholder: options.length ? "只顯示尚未加入仙遊者的成員" : "目前沒有可新增的成員",
+    min_values: options.length ? 1 : 0,
+    max_values: options.length ? 1 : 0,
+    options: options.length ? options : [{ label: "沒有可新增的成員", value: "none", description: "所有成員都已有仙遊者身分" }],
+    disabled: !options.length
+  }] }];
+  if (pageCount > 1) rows.push({ type: 1, components: [
+    { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:add-page:${safePage - 1}`, label: "上一頁", disabled: safePage === 0 },
+    { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:add-page:${safePage + 1}`, label: "下一頁", disabled: safePage >= pageCount - 1 }
+  ] });
+  return rows;
+}
+
 export function adminUidModal(userId) {
   return { customId: `${COMPONENT_IDS.ADMIN_PREFIX}:modal:bind:${userId}`, title: "宗主主動綁定 UID", components: [
     { type: 1, components: [{ type: 4, custom_id: "uid", label: "燕雲十六聲 UID", style: 1, required: true, min_length: 5, max_length: 30, placeholder: "只輸入數字" }] },

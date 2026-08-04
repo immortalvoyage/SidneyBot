@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.13
+# ☯【仙遊者】☯ Discord AI Bot V4.3.14
 
 完整獨立版，使用：
 
@@ -214,3 +214,9 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 - 宗主或長老可按鈕審核；核准後領民自動升為門徒並同步 Discord 身分組。
 - 完成審核後停用原按鈕並記錄審核人與時間。
 - `/game review` 保留為備援審核方式。
+## v4.3.14 新增領民候選人過濾
+
+- 「新增領民」只顯示尚未持有領民、門徒或長老身分組的真人成員，並排除宗主與 Bot。
+- 每頁最多 25 人，可用上一頁／下一頁切換。
+- 候選名單載入與新增操作會先回覆 Discord，避免手機端顯示「未及時回應」。
+- 此功能需要在 Discord Developer Portal 為 Bot 開啟 **Server Members Intent**，否則 Discord 不允許 Bot 讀取完整伺服器成員名單。
