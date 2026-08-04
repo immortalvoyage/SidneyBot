@@ -42,6 +42,9 @@ export function isAdminInteraction(customId) {
 export async function handleAdminInteraction(interaction, env, ctx) {
   const customId = String(interaction.data?.custom_id || "");
   const earlyKey = customId.slice(PREFIX.length);
+  if (ctx?.waitUntil && earlyKey.startsWith("modal:bind:")) {
+    return runDeferredBindModal(interaction, env, ctx, earlyKey.slice(11));
+  }
   if (ctx?.waitUntil && (earlyKey === "add" || earlyKey.startsWith("add-page:") || earlyKey.startsWith("select-add:"))) {
     return runDeferredAdmin(interaction, env, ctx, earlyKey);
   }
@@ -62,6 +65,24 @@ export async function handleAdminInteraction(interaction, env, ctx) {
   } catch (error) {
     return immediateResponse(`❌ ${error.message || "宗主管理操作失敗"}`, true);
   }
+}
+
+function runDeferredBindModal(interaction, env, ctx, userId) {
+  ctx.waitUntil((async () => {
+    try {
+      const actor = await requireMaster(interaction, env);
+      const content = await handleBindModalData(interaction, env, actor, userId);
+      await editOriginalResponse(interaction.application_id, interaction.token, content, { components: [] });
+    } catch (error) {
+      await editOriginalResponse(
+        interaction.application_id,
+        interaction.token,
+        `❌ ${error.message || "宗主主動綁定 UID 失敗"}`,
+        { components: [] }
+      );
+    }
+  })());
+  return deferredResponse(true);
 }
 
 function runDeferredAdmin(interaction, env, ctx, key) {
@@ -172,14 +193,53 @@ async function handleSelection(interaction, env, actor, action) {
 }
 
 async function handleBindModal(interaction, env, actor, userId) {
+  const content = await handleBindModalData(interaction, env, actor, userId);
+  return immediateResponse(content, true);
+}
+
+async function handleBindModalData(interaction, env, actor, userId) {
   const member = await getMember(env, userId);
-  if (!member || member.rank !== RANK.RESIDENT) throw new Error("玩家目前不是可綁定的領民");
-  if (await getGameAccountByUser(env, GAME_IDS.WWM, userId)) throw new Error("該玩家已有核准的 UID 綁定");
-  await requestGameBinding(env, { gameId: GAME_IDS.WWM, userId, discordName: member.username, uid: field(interaction, "uid"), characterName: field(interaction, "character_name") });
-  const account = await approveGameBinding(env, { gameId: GAME_IDS.WWM, userId, reviewerId: actor.userId, note: "宗主管理面板直接綁定" });
-  await promoteResidentAfterUidApproval(env, actor, userId, "宗主主動綁定 UID 後升為門徒", (id, rank) => syncDiscordMemberRank(env, interaction.guild_id, id, rank));
-  await notifyMember(env, { userId, actorId: actor.userId, event: "game_binding.approved_by_master", content: `✅ 宗主已完成你的《燕雲十六聲》UID 綁定。\nUID：${account.uid}\n角色名稱：${account.currentCharacterName}\n身分：門徒` });
-  return immediateResponse(`✅ 已綁定 ${member.displayName} 的 UID ${account.uid}，並升為門徒。`, true);
+  if (!member) throw new Error("玩家尚未加入仙遊者名冊");
+
+  let account = await getGameAccountByUser(env, GAME_IDS.WWM, userId);
+  let newlyBound = false;
+  if (!account) {
+    if (member.rank !== RANK.RESIDENT) throw new Error("只有領民可透過此操作綁定 UID 並升為門徒");
+    await requestGameBinding(env, { gameId: GAME_IDS.WWM, userId, discordName: member.username, uid: field(interaction, "uid"), characterName: field(interaction, "character_name") });
+    account = await approveGameBinding(env, { gameId: GAME_IDS.WWM, userId, reviewerId: actor.userId, note: "宗主管理面板直接綁定" });
+    newlyBound = true;
+  }
+
+  let promotionWarning = "";
+  if (member.rank === RANK.RESIDENT) {
+    try {
+      await promoteResidentAfterUidApproval(env, actor, userId, "宗主主動綁定 UID 後升為門徒", (id, rank) => syncDiscordMemberRank(env, interaction.guild_id, id, rank));
+    } catch (error) {
+      promotionWarning = String(error?.message || error);
+    }
+  }
+
+  if (promotionWarning) {
+    return [
+      `⚠️ ${member.displayName} 的 UID ${account.uid} 已成功綁定。`,
+      "但升為門徒或 Discord 身分組同步未完成，請勿重新綁定 UID。",
+      `原因：${promotionWarning}`,
+      "請使用「查看玩家」確認資料，再重新執行身分調整。"
+    ].join("\n");
+  }
+
+  let notificationWarning = "";
+  try {
+    const notification = await notifyMember(env, { userId, actorId: actor.userId, event: "game_binding.approved_by_master", content: `✅ 宗主已完成你的《燕雲十六聲》UID 綁定。\nUID：${account.uid}\n角色名稱：${account.currentCharacterName}\n身分：門徒` });
+    if (notification?.status !== "sent") notificationWarning = "玩家私人訊息未送達";
+  } catch (error) {
+    notificationWarning = `玩家通知紀錄失敗：${String(error?.message || error)}`;
+  }
+
+  const result = newlyBound
+    ? `✅ 已綁定 ${member.displayName} 的 UID ${account.uid}，並升為門徒。`
+    : `✅ ${member.displayName} 的 UID ${account.uid} 先前已成功綁定；目前已確認為門徒，未重複寫入。`;
+  return notificationWarning ? `${result}\n⚠️ ${notificationWarning}；核心綁定與晉升仍已完成。` : result;
 }
 
 async function handleRemove(interaction, env, actor, userId) {

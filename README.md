@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.14
+# ☯【仙遊者】☯ Discord AI Bot V4.3.15
 
 完整獨立版，使用：
 
@@ -220,3 +220,10 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 - 每頁最多 25 人，可用上一頁／下一頁切換。
 - 候選名單載入與新增操作會先回覆 Discord，避免手機端顯示「未及時回應」。
 - 此功能需要在 Discord Developer Portal 為 Bot 開啟 **Server Members Intent**，否則 Discord 不允許 Bot 讀取完整伺服器成員名單。
+
+## v4.3.15 主動 UID 綁定回覆修正
+
+- 宗主送出 UID Modal 後會立即回覆 Discord，再於背景完成綁定與晉升，避免顯示「出問題了，再試一次」。
+- UID 已寫入但身分組同步失敗時，會明確顯示部分完成狀態，不會把成功綁定誤報為整體失敗。
+- 玩家私訊失敗不會覆蓋核心綁定結果。
+- 同一玩家已成功綁定時可安全重送，系統只回報既有狀態，不會重複寫入。

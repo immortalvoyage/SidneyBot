@@ -79,3 +79,57 @@ test("新增領民選單排除已有仙遊者身分組、宗主與機器人", as
     globalThis.fetch = originalFetch;
   }
 });
+
+test("宗主主動綁定 UID 的 Modal 會先延遲回覆，完成後顯示成功且可安全重送", async () => {
+  const env = createEnv();
+  await upsertMember(env, { userId: "resident-1", username: "resident", displayName: "領民一號", rank: RANK.RESIDENT });
+  const edits = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    const target = String(url);
+    if (target.includes("/guilds/guild-1/members/resident-1")) {
+      return new Response(JSON.stringify({ roles: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    if (target.endsWith("/users/@me/channels")) {
+      return new Response(JSON.stringify({ id: "dm-1" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    if (target.includes("/channels/dm-1/messages")) {
+      return new Response(JSON.stringify({ id: "message-1" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    if (target.includes("/webhooks/app-1/token-1/messages/@original")) {
+      edits.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ id: "original" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    throw new Error(`未預期的測試請求：${target}`);
+  };
+
+  const modal = {
+    ...interaction("sidney:admin:v1:modal:bind:resident-1"),
+    application_id: "app-1",
+    token: "token-1",
+    data: {
+      custom_id: "sidney:admin:v1:modal:bind:resident-1",
+      components: [
+        { components: [{ custom_id: "uid", value: "3027610763" }] },
+        { components: [{ custom_id: "character_name", value: "o夏之雪o" }] }
+      ]
+    }
+  };
+
+  try {
+    const pending = [];
+    const first = await payload(await handleAdminInteraction(modal, env, { waitUntil(task) { pending.push(task); } }));
+    assert.equal(first.type, 5);
+    assert.equal(first.data.flags, 64);
+    await Promise.all(pending);
+    assert.match(edits.at(-1).content, /已綁定.*3027610763.*升為門徒/);
+
+    const secondPending = [];
+    const second = await payload(await handleAdminInteraction(modal, env, { waitUntil(task) { secondPending.push(task); } }));
+    assert.equal(second.type, 5);
+    await Promise.all(secondPending);
+    assert.match(edits.at(-1).content, /先前已成功綁定.*未重複寫入/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
