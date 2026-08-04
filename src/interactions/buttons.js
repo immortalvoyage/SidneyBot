@@ -21,9 +21,11 @@ import {
   parseUidReviewId,
   uidReviewComponents
 } from "./components.js";
+import { handleAdminInteraction, isAdminInteraction } from "./admin-panel.js";
 
 export async function handleButton(interaction, env) {
   const customId = String(interaction.data?.custom_id || "");
+  if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env);
   if (customId === COMPONENT_IDS.DAILY_GREETING) {
     return handleDailyGreeting(interaction, env);
   }

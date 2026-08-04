@@ -20,6 +20,14 @@ export function immediateResponse(content, ephemeral = false) {
   });
 }
 
+export function componentResponse(content, components = [], ephemeral = true) {
+  return json({ type: 4, data: { content: String(content || ""), components, flags: ephemeral ? 64 : 0, allowed_mentions: { parse: [] } } });
+}
+
+export function modalResponse(customId, title, components = []) {
+  return json({ type: 9, data: { custom_id: String(customId || ""), title: String(title || "").slice(0, 45), components } });
+}
+
 export function deferredResponse(ephemeral = false) {
   return json({
     type: 5,

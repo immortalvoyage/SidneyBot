@@ -178,6 +178,7 @@ async function handleHelp(interaction, env) {
     lines.push(
       "",
       "### 宗主管理指令",
+      "`/panel`：在宗主審批私人頻道建立手機按鈕管理面板",
       "`/member get player:<名冊玩家>`：查看成員詳細資料與燕雲綁定",
       "`/member set-rank player:<名冊玩家> rank:<領民、門徒或長老> note:<備註>`：調整正式成員身分",
       "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：將成員移出名冊",

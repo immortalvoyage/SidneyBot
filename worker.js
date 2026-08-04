@@ -8,11 +8,13 @@ import { handleAuditAutocomplete } from "./src/commands/audit-autocomplete.js";
 import { handleRedeemCodeEvent } from "./src/integrations/redeem-codes.js";
 import { normalizeChineseInteraction } from "./src/commands/localization.js";
 import { handleButton } from "./src/interactions/buttons.js";
+import { handleAdminInteraction, isAdminInteraction } from "./src/interactions/admin-panel.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
 const APPLICATION_COMMAND_AUTOCOMPLETE = 4;
 const MESSAGE_COMPONENT = 3;
+const MODAL_SUBMIT = 5;
 
 export default {
   async fetch(request, env, ctx) {
@@ -27,7 +29,7 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(
-        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.12"} is running.`
+        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.13"} is running.`
       );
     }
 
@@ -69,6 +71,11 @@ export default {
 
     if (interaction.type === MESSAGE_COMPONENT) {
       return handleButton(interaction, env);
+    }
+    if (interaction.type === MODAL_SUBMIT) {
+      const customId = String(interaction.data?.custom_id || "");
+      if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env);
+      return json({ type: 4, data: { content: "❌ 這個表單已失效。", flags: 64 } });
     }
 
     if (interaction.type === APPLICATION_COMMAND_AUTOCOMPLETE) {

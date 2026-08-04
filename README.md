@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.12
+# ☯【仙遊者】☯ Discord AI Bot V4.3.13
 
 完整獨立版，使用：
 
@@ -203,7 +203,11 @@ npx wrangler secret put DISCORD_BOT_TOKEN
 - 本版修改了 Discord 指令註冊資料，部署時必須依序執行 `npm run register` 與 `npm run deploy`。
 - 若 Discord 伺服器的「整合 → 老祖 Bot → 指令」曾由管理者手動限制 `/game`，仍須在 Discord 設定中將該手動覆寫恢復為所有成員可用。
 
-# SidneyBot v4.3.12 UID 綁定按鈕審核
+# SidneyBot v4.3.13 宗主手機管理面板
+
+宗主可在私人頻道 `1534238116099919933` 執行一次 `/panel` 建立手機管理面板。面板支援新增領民、主動綁定 UID 並升為門徒、晉升長老、退出百業降為領民、查看玩家、軟移出名冊與最近操作紀錄。降階或移出時保留 UID 與歷史資料。
+
+## v4.3.12 UID 綁定按鈕審核
 
 - 領民提交 `/game bind` 後，申請卡會送到 `APPLICATION_REVIEW_CHANNEL_ID`。
 - UID 申請卡提供「同意 UID 綁定」與「拒絕 UID 綁定」按鈕。
