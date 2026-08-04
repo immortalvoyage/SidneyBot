@@ -5,7 +5,7 @@
   "compatibility_flags": ["nodejs_compat"],
   
   "vars": {
-    "APP_VERSION": "4.3.0",
+    "APP_VERSION": "4.3.1",
     "SECT_NAME": "☯【仙遊者】☯",
     "SECT_MASTER_ID": "1179245490081103994",
 	"APPLICATION_REVIEW_CHANNEL_ID": "1533875614568812605",
@@ -14,7 +14,7 @@
 	"REDEEM_CODE_CHANNEL_ID": "1531897588687704116",
 	
     "GEMINI_MODEL": "gemini-3.5-flash-lite",
-    "GEMINI_FALLBACK_MODELS": "gemini-3.5-flash",
+    "GEMINI_FALLBACK_MODELS": "gemini-2.5-flash,gemini-2.5-flash-lite",
 	
     "GEMINI_MAX_OUTPUT_TOKENS": "1600",
     "GEMINI_TIMEOUT_MS": "45000",

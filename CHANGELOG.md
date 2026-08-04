@@ -112,3 +112,9 @@
 - `/approve` 與 `/reject` 改用 KV 待審入宗申請 autocomplete，無須手動輸入 Discord ID。
 - `/apply` 成功後可透過 `APPLICATION_REVIEW_CHANNEL_ID` 通知指定審核頻道。
 - 審核通知失敗只寫入錯誤紀錄，不影響已保存的申請。
+# v4.3.1
+
+- 保留 13 組既有英文 Discord Slash Commands。
+- 新增 13 組功能相同的繁體中文 Slash Commands。
+- 中文指令、子指令與參數在進入既有處理器前標準化，避免維護兩套業務邏輯。
+- 新增中文指令轉換測試。

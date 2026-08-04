@@ -6,6 +6,7 @@ import { handleApplicationAutocomplete } from "./src/commands/application-autoco
 import { handleGameBindingAutocomplete } from "./src/commands/game-binding-autocomplete.js";
 import { handleAuditAutocomplete } from "./src/commands/audit-autocomplete.js";
 import { handleRedeemCodeEvent } from "./src/integrations/redeem-codes.js";
+import { normalizeChineseInteraction } from "./src/commands/localization.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -61,6 +62,8 @@ export default {
     if (interaction.type === PING) {
       return json({ type: 1 });
     }
+
+    interaction = normalizeChineseInteraction(interaction);
 
     if (interaction.type === APPLICATION_COMMAND_AUTOCOMPLETE) {
       if (["approve", "reject"].includes(interaction.data?.name)) {

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { createChineseCommands } from "./src/commands/localization.js";
 
 loadLocalEnvironment();
 
@@ -7,7 +8,7 @@ const APPLICATION_ID = clean(process.env.DISCORD_APPLICATION_ID);
 const BOT_TOKEN = clean(process.env.DISCORD_BOT_TOKEN);
 const GUILD_ID = clean(process.env.DISCORD_GUILD_ID);
 
-const COMMANDS = [
+const ENGLISH_COMMANDS = [
   {
     name: "ai",
     description: "公開向老祖提問",
@@ -252,6 +253,11 @@ const COMMANDS = [
     ]
   },
   { name: "help", description: "私密查看 Bot 使用說明" }
+];
+
+const COMMANDS = [
+  ...ENGLISH_COMMANDS,
+  ...createChineseCommands(ENGLISH_COMMANDS)
 ];
 
 async function registerCommands() {

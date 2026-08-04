@@ -124,9 +124,10 @@ async function handleHelp(interaction, env) {
     `你的身分：${RANK_LABEL[rank] || "尚未入宗"}`,
     "",
     "### 目前可用指令",
-    "`/help`：私密查看你目前能使用的指令",
-    "`/profile view`：私密查看個人與仙遊者資料",
-    "`/forget`：私密清除自己的 AI 對話記憶"
+    "英文與中文指令功能相同，例如 `/help` = `/幫助`。",
+    "`/help`／`/幫助`：私密查看你目前能使用的指令",
+    "`/profile view`／`/個人資料 查看`：私密查看個人與仙遊者資料",
+    "`/forget`／`/忘記`：私密清除自己的 AI 對話記憶"
   ];
 
   if (!member) {
