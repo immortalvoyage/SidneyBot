@@ -110,6 +110,10 @@ test("老祖 Prompt 明確限制未知系統狀態且維持角色口吻", async 
   assert.match(prompt, /仍須保持老祖的人格、情緒、幽默與世界觀/);
   assert.match(prompt, /不得退回人工智慧、客服或生硬技術口吻/);
   assert.match(prompt, /不得使用「身為 AI」「我無法存取系統」/);
+  assert.match(prompt, /不得說「稍後再問」「等一下再喚本座」/);
+  assert.match(prompt, /不得猜測 CPU 使用率/);
+  assert.match(prompt, /只有目前訊息或程式明確提供可用的查詢工具、監測來源或待執行動作時/);
+  assert.match(prompt, /不得以虛假的未來承諾掩飾能力邊界/);
 });
 
 for (const [rank, expectedLabel] of [
