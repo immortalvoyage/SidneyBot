@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.19
+# ☯【仙遊者】☯ Discord AI Bot V4.3.20
 
 完整獨立版，使用：
 
@@ -23,7 +23,7 @@
 - `/profile view`
 - `/profile set-name name:<顯示名稱>`
 - `/forget`
-- `/help`
+- `/help topic:<功能分類>`
 - `/game bind|status|pending|approve|reject`
 - `/audit recent|view`
 - `/laozu reprimand player:<玩家> affection:<1～5> reason:<原因>`
@@ -37,7 +37,8 @@
 - 長老：管理層，包含門徒權限，可審核入宗與遊戲綁定申請
 - 宗主：完整權限，可查詢、升降階及移除成員；`SECT_MASTER_ID` 第一次互動時自動建立宗主名冊
 - 指令授權以即時 KV 名冊為準，不信任殘留的 Discord 身分組
-- `/help` 依即時 KV 身分只顯示呼叫者目前可使用的指令
+- `/help` 預設只顯示目前身分最常用的入口；完整功能依基本、遊戲、審核、宗主管理與系統維護分類查看
+- `/help` 依即時 KV 身分授權分類，低階玩家不能讀取高階管理說明
 - 正式成員可用 `/profile set-name` 修改仙遊者名冊顯示名稱；不會修改 Discord 或遊戲角色名稱
 - `/game approve`、`/game reject` 只顯示 KV 中仍待審且仍是正式成員的申請者
 - `/audit` 只允許宗主私密查看最近操作紀錄與單筆詳情

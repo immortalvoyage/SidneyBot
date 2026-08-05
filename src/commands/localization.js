@@ -13,6 +13,7 @@ const ENGLISH_TO_CHINESE = Object.freeze({
   laozu: "老祖",
   system: "系統",
   help: "幫助",
+  topic: "分類",
   question: "問題",
   reason: "理由",
   applicant: "申請者",

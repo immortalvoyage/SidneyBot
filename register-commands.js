@@ -284,7 +284,25 @@ export const ENGLISH_COMMANDS = [
       }
     ]
   },
-  { name: "help", description: "私密查看 Bot 使用說明" }
+  {
+    name: "help",
+    description: "依目前身分私密查看 Bot 使用說明",
+    options: [
+      {
+        name: "topic",
+        description: "選擇要查看的功能分類；不選則顯示身分首頁",
+        type: 3,
+        required: false,
+        choices: [
+          { name: "基本功能", value: "basic" },
+          { name: "遊戲綁定", value: "game" },
+          { name: "審核工作", value: "review" },
+          { name: "宗主管理", value: "admin" },
+          { name: "系統維護", value: "system" }
+        ]
+      }
+    ]
+  }
 ];
 
 // Custom sect roles cannot be represented by Discord permission bits. Keep every

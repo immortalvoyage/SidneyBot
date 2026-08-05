@@ -129,90 +129,145 @@ async function handleHelp(interaction, env) {
   await ensureMaster(env, user);
   const member = await getMember(env, user.id);
   const rank = member?.rank || null;
-
+  const topic = String(getOptionValue(interaction, "topic") || "home");
   const lines = [
-    `## ${env.SECT_NAME || "☯【仙遊者】☯"} AI Bot`,
-    `你的身分：${RANK_LABEL[rank] || "尚未入宗"}`,
-    "",
-    "### 目前可用指令",
-    "以下只顯示你目前有權使用的指令。",
-    "`/help`：私密查看你目前能使用的指令",
-    "`/profile view`：私密查看個人與仙遊者資料",
-    "`/forget`：私密清除自己的 AI 對話記憶"
+    `## ${env.SECT_NAME || "☯【仙遊者】☯"}使用說明`,
+    `你的身分：**${RANK_LABEL[rank] || "尚未入宗"}**`
   ];
 
-  if (canApplyForMembership(rank)) {
-    lines.push(
-      "`/apply reason:<理由>`：私密申請加入仙遊者"
-    );
+  if (topic === "home") {
+    lines.push(...helpHome(rank));
+  } else {
+    lines.push(...helpTopic(topic, rank));
   }
 
-  if (rank && canUseAI(rank)) {
-    lines.push(
-      "`/profile set-name name:<顯示名稱>`：修改自己的仙遊者名冊名稱",
-      "`/ai question:<問題>`：公開向老祖提問",
-      "`/sect`：私密查看仙遊者狀態與自己的身分",
-      "`/members page:<頁碼>`：私密查看手機版仙遊者名冊，可用按鈕翻頁與查找玩家"
-    );
-  }
-
-  if (canRequestUidBinding(rank)) {
-    lines.push(
-      "",
-      "### UID 綁定申請",
-      "`/game bind uid:<UID> character_name:<角色名稱>`：提交《燕雲十六聲》UID 綁定申請",
-      "`/game status`：查看自己的 UID 綁定狀態"
-    );
-  } else if (canViewUidStatus(rank)) {
-    lines.push("`/game status`：查看自己的 UID 綁定狀態");
-  }
-
-  if (rank && canApprove(rank)) {
-    lines.push(
-      "",
-      "### 審核指令",
-      "`/review applicant:<待審申請者> decision:<核准／拒絕>`：審核加入仙遊者",
-      "`/panel`：在目前頻道建立每日請安面板（宗主／長老）",
-      "`/game pending`：查看待審 UID 綁定",
-      "`/game review applicant:<待審綁定> decision:<核准／拒絕>`：審核 UID 綁定"
-    );
-  }
-
-  if (rank && canManageRanks(rank)) {
-    lines.push(
-      "",
-      "### 宗主管理指令",
-      "`/panel`：在宗主審批私人頻道建立手機按鈕管理面板",
-      "`/member get player:<名冊玩家>`：查看成員詳細資料與燕雲綁定",
-      "`/member set-rank player:<名冊玩家> rank:<領民、門徒或長老> note:<備註>`：調整正式成員身分",
-      "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：將成員移出名冊",
-      "`/audit recent`：查看最近 10 筆操作紀錄",
-      "`/audit view record:<紀錄>`：查看單筆操作詳情",
-      "`/laozu reprimand player:<玩家> affection:<1～5> reason:<原因>`：由老祖公開訓誡玩家並降低好感",
-      "`/system check`：檢查 KV 名冊與審核索引一致性",
-      "`/system repair confirm:<確認修復>`：安全重建 KV 索引",
-      "`/ai question:將 @玩家 加入仙遊者`：請老祖直接新增領民",
-      "`/ai question:將 @玩家 加入仙遊者成為長老`：請老祖直接新增長老"
-    );
-  }
-
-  if (rank && canViewMembers(rank)) {
-    lines.push(
-      "",
-      "### 使用提醒",
-      "畫面只列出你目前身分可使用的指令。",
-      "權限以仙遊者即時名冊為準。"
-    );
-  }
-
-  lines.push(
-    "請勿輸入密碼、Token、API Key 或其他機密資料。"
-  );
+  lines.push("", "*所有說明皆為私人訊息，其他玩家看不到。*");
 
   return immediateResponse(
     lines.join("\n"),
     true
   );
+}
+
+function helpHome(rank) {
+  if (canApplyForMembership(rank)) {
+    return [
+      "### 下一步：申請加入",
+      "`/apply`　提交仙遊者入門申請",
+      "",
+      "### 其他功能",
+      "`/profile view`　查看自己的資料",
+      "`/help topic:基本功能`　查看完整基本說明"
+    ];
+  }
+
+  if (canRequestUidBinding(rank)) {
+    return [
+      "### 下一步：綁定遊戲角色",
+      "`/game bind`　申請綁定《燕雲十六聲》UID",
+      "`/game status`　查看審核進度",
+      "",
+      "### 日常使用",
+      "`/ai`　向老祖提問",
+      "`/profile view`　查看個人資料與萬象錄",
+      "`/members`　查看仙遊者名冊",
+      "",
+      "更多說明：在 `/help` 選擇「遊戲綁定」或「基本功能」。"
+    ];
+  }
+
+  const lines = [
+    "### 常用功能",
+    "`/ai`　向老祖提問",
+    "`/profile view`　查看個人資料與萬象錄",
+    "`/members`　查看仙遊者名冊",
+    "`/game status`　查看遊戲綁定"
+  ];
+
+  if (canApprove(rank)) {
+    lines.push(
+      "",
+      "### 待辦入口",
+      "`/panel`　建立老祖互動面板",
+      "在 `/help` 選擇「審核工作」查看審核指令。"
+    );
+  }
+
+  if (canManageRanks(rank)) {
+    lines.push(
+      "在 `/help` 選擇「宗主管理」或「系統維護」查看進階功能。"
+    );
+  }
+
+  lines.push("", "其他個人功能：在 `/help` 選擇「基本功能」。");
+  return lines;
+}
+
+function helpTopic(topic, rank) {
+  if (topic === "basic") {
+    const lines = [
+      "### 基本功能",
+      "`/profile view`　查看個人資料與萬象錄",
+      "`/forget`　清除自己的 AI 對話記憶"
+    ];
+    if (rank && canUseAI(rank)) {
+      lines.push(
+        "`/profile set-name`　修改名冊顯示名稱",
+        "`/ai`　公開向老祖提問",
+        "`/sect`　查看仙遊者狀態",
+        "`/members`　查看仙遊者名冊"
+      );
+    } else {
+      lines.push("`/apply`　提交仙遊者入門申請");
+    }
+    return lines;
+  }
+
+  if (topic === "game" && canViewUidStatus(rank)) {
+    const lines = ["### 遊戲綁定"];
+    if (canRequestUidBinding(rank)) {
+      lines.push("`/game bind`　申請綁定自己的遊戲 UID");
+    }
+    lines.push("`/game status`　查看自己的綁定狀態");
+    return lines;
+  }
+
+  if (topic === "review" && canApprove(rank)) {
+    return [
+      "### 審核工作",
+      "`/review`　審核入門申請",
+      "`/game pending`　查看待審 UID 綁定",
+      "`/game review`　核准或拒絕 UID 綁定",
+      "`/panel`　建立老祖互動面板"
+    ];
+  }
+
+  if (topic === "admin" && canManageRanks(rank)) {
+    return [
+      "### 宗主管理",
+      "`/member get`　查看成員詳細資料",
+      "`/member set-rank`　調整成員身分",
+      "`/member remove`　將成員移出名冊",
+      "`/laozu reprimand`　公開訓誡並降低好感",
+      "`/audit recent`　查看最近操作紀錄",
+      "`/audit view`　查看單筆操作詳情"
+    ];
+  }
+
+  if (topic === "system" && canManageRanks(rank)) {
+    return [
+      "### 系統維護",
+      "`/system check`　檢查 KV 資料一致性（只讀）",
+      "`/system repair`　重建 KV 索引",
+      "",
+      "⚠️ 修復前先執行 `/system check`，只有確認異常才使用 repair。"
+    ];
+  }
+
+  return [
+    "### 此分類目前無法使用",
+    "你的身分沒有這項功能，請重新輸入 `/help` 查看可用入口。"
+  ];
 }
 
 async function handleAsk(interaction, env, ctx) {
