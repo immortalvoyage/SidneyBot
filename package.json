@@ -11,7 +11,7 @@
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "setup:discord": "powershell -ExecutionPolicy Bypass -File scripts/setup-discord-local.ps1",
-    "gateway": "node gateway.js"
+    "gateway": "node --env-file=.dev.vars gateway.js"
   },
   "devDependencies": {
     "wrangler": "^4.28.0"
