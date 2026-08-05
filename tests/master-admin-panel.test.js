@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { handleAdminInteraction } from "../src/interactions/admin-panel.js";
-import { masterAdminPanelComponents } from "../src/interactions/components.js";
+import { adminCandidateSelect, masterAdminPanelComponents } from "../src/interactions/components.js";
 import { RANK } from "../src/sect/constants.js";
 import { upsertMember } from "../src/sect/members.js";
 
@@ -34,6 +34,16 @@ test("宗主管理面板提供手機常用操作按鈕", () => {
   for (const action of ["add", "bind", "promote", "demote", "view", "remove", "audit", "refresh"]) {
     assert.ok(ids.includes(`sidney:admin:v1:${action}`));
   }
+});
+
+test("沒有合格候選人時輸出合法且停用的選單", () => {
+  const menu = adminCandidateSelect("bind", [])[0].components[0];
+  assert.equal(menu.disabled, true);
+  assert.equal(menu.min_values, 1);
+  assert.equal(menu.max_values, 1);
+  assert.equal(menu.options.length, 1);
+  assert.equal(menu.options[0].value, "none");
+  assert.match(menu.placeholder, /沒有符合資格/);
 });
 
 test("管理按鈕只允許宗主在指定私人頻道使用", async () => {

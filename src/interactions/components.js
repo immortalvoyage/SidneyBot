@@ -31,8 +31,8 @@ export function adminCandidateSelect(action, candidates, page = 0) {
     type: 3,
     custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:select-candidate:${action}:${safePage}`,
     placeholder: options.length ? candidatePlaceholder(action) : "目前沒有符合資格的玩家",
-    min_values: options.length ? 1 : 0,
-    max_values: options.length ? 1 : 0,
+    min_values: 1,
+    max_values: 1,
     options: options.length ? options : [{ label: "沒有符合資格的玩家", value: "none", description: "請確認玩家目前身分與 UID 狀態" }],
     disabled: !options.length
   }] }];

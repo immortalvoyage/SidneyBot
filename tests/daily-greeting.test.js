@@ -67,6 +67,24 @@ test("同一台灣日期重複請安不重複加分", async () => {
   assert.equal(state.relationship.favor, 51);
 });
 
+test("舊名冊成員缺少萬象錄時於首次請安自動補建", async () => {
+  const env = createEnv();
+  await addMember(env, "legacy-member");
+  await env.BOT_MEMORY.delete("platform:player-state:legacy-member");
+
+  const result = await recordDailyGreeting(
+    env,
+    "legacy-member",
+    new Date("2026-08-04T02:00:00Z")
+  );
+  const state = await getPlayerState(env, "legacy-member");
+
+  assert.equal(result.created, true);
+  assert.equal(state.identity.displayName, "月兔");
+  assert.equal(state.relationship.favor, 51);
+  assert.equal(state.greeting.totalDays, 1);
+});
+
 test("中斷一天後連續天數重設，非正式成員不可請安", async () => {
   const env = createEnv();
   await addMember(env);

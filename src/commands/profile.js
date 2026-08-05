@@ -15,6 +15,7 @@ import {
   setOwnDisplayName
 } from "../sect/service.js";
 import {
+  ensurePlayerState,
   getPlayerState,
   formatPlayerStateSummary
 } from "../platform/player-state-storage.js";
@@ -68,11 +69,13 @@ export async function handleProfile(interaction, env) {
     );
   }
 
-  const [profile, member, playerState] = await Promise.all([
+  const [profile, member] = await Promise.all([
     loadProfile(env, guildId, user.id),
-    getMember(env, user.id),
-    getPlayerState(env, user.id)
+    getMember(env, user.id)
   ]);
+  const playerState = member
+    ? await ensurePlayerState(env, member)
+    : await getPlayerState(env, user.id);
 
   return immediateResponse(
     [

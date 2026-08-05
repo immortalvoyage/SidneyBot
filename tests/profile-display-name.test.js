@@ -128,13 +128,14 @@ test("相同名稱不重複寫入 Audit", async () => {
   assert.deepEqual(await listAudits(env), []);
 });
 
-test("profile view 可查看宗門名稱與本人萬象錄摘要", async () => {
+test("profile view 會補建舊成員缺少的萬象錄並顯示摘要", async () => {
   const env = createEnv();
   await upsertMember(env, {
     userId: "member-1",
     displayName: "凜冬皓月",
     rank: RANK.DISCIPLE
   });
+  await env.BOT_MEMORY.delete("platform:player-state:member-1");
 
   const content = await responseContent(
     await handleCommand(interaction("member-1", "view"), env, {})

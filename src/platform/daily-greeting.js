@@ -1,5 +1,5 @@
 import { getMember } from "../sect/members.js";
-import { getPlayerState, savePlayerState } from "./player-state-storage.js";
+import { ensurePlayerState, savePlayerState } from "./player-state-storage.js";
 import { normalizePlayerState } from "./player-state.js";
 
 export function taipeiDate(date = new Date()) {
@@ -23,8 +23,7 @@ export async function recordDailyGreeting(env, userId, now = new Date()) {
   const member = await getMember(env, userId);
   if (!member) throw new Error("只有仙遊者正式成員可以向老祖請安");
 
-  const state = await getPlayerState(env, userId);
-  if (!state) throw new Error("尚未建立萬象錄玩家資料，請聯絡宗主");
+  const state = await ensurePlayerState(env, member);
 
   const today = taipeiDate(now);
   if (state.greeting.lastDate === today) {
