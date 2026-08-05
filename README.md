@@ -163,6 +163,15 @@ npm run register
 - 不要把 Bot Token、Gemini API Key 或 Discord Public Key 寫進 Git。
 - `wrangler.jsonc` 可保存非機密 vars；機密一律使用 `wrangler secret put`。
 - `/approve`、`/reject` 與 `/member` 管理指令使用 KV 自動完成選單。
+
+## v4.3.22 `@老祖` 上線檢查
+
+- Worker 部署後，以 `GET /healthz` 確認版本與三項整合 Secret 是否已設定；回應只包含布林能力，不會洩露 Secret。
+- Gateway 可使用 `Dockerfile.gateway` 部署到支援常駐容器與 WebSocket 的服務。
+- Gateway 必須設定 `DISCORD_BOT_TOKEN`、`SIDNEY_MENTION_ENDPOINT`、`DISCORD_GATEWAY_SECRET`，並可選填 `LAOZU_CHANNEL_IDS`。
+- Gateway 的 `GET /healthz` 在 Discord 連線完成後回傳 HTTP 200，未連線時回傳 HTTP 503，供部署平台做 Readiness Probe。
+- Discord Developer Portal 必須開啟 **Message Content Intent**；若使用完整成員候選名單，也保留 **Server Members Intent**。
+- 收到終止訊號時 Gateway 會停止重連、關閉 Discord 連線及健康檢查服務，避免部署換版留下重複連線。
 # 入宗申請審核通知
 
 在 `wrangler.jsonc` 的 `vars` 填入只供宗主／長老查看的 Discord 頻道 ID：

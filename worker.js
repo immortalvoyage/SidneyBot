@@ -11,6 +11,7 @@ import { handleButton } from "./src/interactions/buttons.js";
 import { handleAdminInteraction, isAdminInteraction } from "./src/interactions/admin-panel.js";
 import { handleLaozuStateRequest } from "./src/integrations/laozu-state.js";
 import { handleDiscordMentionEvent } from "./src/integrations/discord-mentions.js";
+import { handleHealthRequest } from "./src/integrations/health.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -21,6 +22,9 @@ const MODAL_SUBMIT = 5;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === "/healthz" && request.method === "GET") {
+      return handleHealthRequest(env);
+    }
 
     if (url.pathname === "/integrations/redeem-codes") {
       return handleRedeemCodeEvent(request, env);
@@ -37,7 +41,7 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(
-        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.21"} is running.`
+        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.22"} is running.`
       );
     }
 
