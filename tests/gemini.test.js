@@ -96,6 +96,22 @@ test("沒有萬象錄資料時禁止老祖猜測關係狀態", async () => {
   assert.match(prompt, /不得自行猜測好感、信任、請安紀錄/);
 });
 
+test("老祖 Prompt 明確限制未知系統狀態且維持角色口吻", async () => {
+  const prompt = await capturePrompt({
+    userId: "123",
+    displayName: "測試成員",
+    rank: "resident",
+    active: true
+  });
+
+  assert.match(prompt, /【系統狀態與事實邊界】/);
+  assert.match(prompt, /未提供的連線、部署、排程、權限、資料庫、訊息收發或操作結果/);
+  assert.match(prompt, /不得臨時編造故事圓場/);
+  assert.match(prompt, /仍須保持老祖的人格、情緒、幽默與世界觀/);
+  assert.match(prompt, /不得退回人工智慧、客服或生硬技術口吻/);
+  assert.match(prompt, /不得使用「身為 AI」「我無法存取系統」/);
+});
+
 for (const [rank, expectedLabel] of [
   ["master", "宗主"],
   ["elder", "長老"],
