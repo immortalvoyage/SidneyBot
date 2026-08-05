@@ -9,6 +9,7 @@ import { handleRedeemCodeEvent } from "./src/integrations/redeem-codes.js";
 import { normalizeChineseInteraction } from "./src/commands/localization.js";
 import { handleButton } from "./src/interactions/buttons.js";
 import { handleAdminInteraction, isAdminInteraction } from "./src/interactions/admin-panel.js";
+import { handleLaozuStateRequest } from "./src/integrations/laozu-state.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -23,13 +24,16 @@ export default {
     if (url.pathname === "/integrations/redeem-codes") {
       return handleRedeemCodeEvent(request, env);
     }
+    if (url.pathname === "/integrations/laozu-state") {
+      return handleLaozuStateRequest(request, env);
+    }
 
     const apiResponse = await handlePlatformApi(request, env, url);
     if (apiResponse) return apiResponse;
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(
-        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.20"} is running.`
+        `${env.SECT_NAME || "☯【仙遊者】☯"} Bot V${env.APP_VERSION || "4.3.21"} is running.`
       );
     }
 

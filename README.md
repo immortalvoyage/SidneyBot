@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.20
+# ☯【仙遊者】☯ Discord AI Bot V4.3.21
 
 完整獨立版，使用：
 

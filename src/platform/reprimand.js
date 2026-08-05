@@ -4,6 +4,7 @@ import { RANK } from "../sect/constants.js";
 import { writeAudit } from "../sect/audit.js";
 import { kvGet, kvPut } from "../sect/storage.js";
 import { ensurePlayerState, savePlayerState } from "./player-state-storage.js";
+import { recordLaozuSignal } from "./laozu-mood-state.js";
 
 const PROCESSED_PREFIX = "platform:reprimand:";
 const FORMAL_RANKS = [RANK.RESIDENT, RANK.DISCIPLE, RANK.ELDER];
@@ -87,5 +88,11 @@ export async function reprimandPlayer(env, {
     auditId: audit.id
   };
   await kvPut(env, processedKey, result, { expirationTtl: 60 * 60 * 24 * 30 });
+  await recordLaozuSignal(env, {
+    type: "player_reprimanded",
+    actorId: actor.userId,
+    eventId: `reprimand:${eventId}`,
+    weight: deduction
+  });
   return result;
 }

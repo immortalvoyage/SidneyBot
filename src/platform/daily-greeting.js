@@ -1,6 +1,7 @@
 import { getMember } from "../sect/members.js";
 import { ensurePlayerState, savePlayerState } from "./player-state-storage.js";
 import { normalizePlayerState } from "./player-state.js";
+import { recordLaozuSignal } from "./laozu-mood-state.js";
 
 export function taipeiDate(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -48,5 +49,11 @@ export async function recordDailyGreeting(env, userId, now = new Date()) {
     }
   });
   await savePlayerState(env, updated);
+  await recordLaozuSignal(env, {
+    type: "daily_greeting",
+    actorId: userId,
+    eventId: `greeting:${userId}:${today}`,
+    now
+  });
   return { created: true, state: updated, date: today };
 }

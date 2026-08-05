@@ -1,5 +1,6 @@
 import { kvGet, kvPut } from "../sect/storage.js";
 import { writeAudit } from "../sect/audit.js";
+import { recordLaozuSignal } from "../platform/laozu-mood-state.js";
 
 const MAX_AGE_SECONDS = 300;
 const MAX_CODES = 40;
@@ -54,6 +55,12 @@ export async function handleRedeemCodeEvent(request, env) {
     action: "redeem_codes_announced",
     actorId: "system:redeem-tracker",
     details: { eventId, codes, count: codes.length }
+  });
+  await recordLaozuSignal(env, {
+    type: "redeem_codes_found",
+    actorId: "system:redeem-tracker",
+    eventId: `redeem:${eventId}`,
+    weight: Math.min(3, codes.length)
   });
 
   return json({ ok: true, announced: codes.length });

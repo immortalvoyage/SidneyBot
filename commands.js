@@ -1,4 +1,5 @@
 import { askGemini } from "./gemini.js";
+import { recordLaozuSignal } from "./src/platform/laozu-mood-state.js";
 
 import {
   deferredResponse,
@@ -355,6 +356,12 @@ async function processAsk(
       question,
       answer
     );
+
+    await recordLaozuSignal(env, {
+      type: "meaningful_chat",
+      actorId: userId,
+      eventId: `chat:${userId}:${new Date().toISOString().slice(0, 10)}`
+    });
 
     await sendLongReply(
       interaction.application_id,
