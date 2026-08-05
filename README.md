@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.21
+# ☯【仙遊者】☯ Discord AI Bot V4.3.22
 
 完整獨立版，使用：
 
@@ -8,6 +8,18 @@
 - Cloudflare KV
 - 宗門申請、審核、名冊、權限、Audit Log
 - 個人資料與多輪聊天記憶
+
+## `@老祖` 自然呼叫
+
+`gateway.js` 常駐接收 Discord 一般頻道訊息，只處理真正提及 Bot 的內容，再以 HMAC 簽章送到 Worker 的 `/integrations/discord-mentions`。正式成員權限、Gemini、30 天記憶、萬象錄、心情訊號與防重送仍由 Worker 處理；Gateway 不直接接觸 KV。
+
+必要 Secrets／環境變數：
+
+- Worker Secret：`DISCORD_GATEWAY_SECRET`
+- Gateway：`DISCORD_BOT_TOKEN`、`SIDNEY_MENTION_ENDPOINT`、`DISCORD_GATEWAY_SECRET`
+- 選用：`LAOZU_CHANNEL_IDS`，以逗號限制可回覆頻道；留空代表所有可見頻道
+
+Discord Developer Portal 必須開啟 `MESSAGE CONTENT INTENT`。Gateway 使用 Node.js 22 以上，以 `npm run gateway` 啟動；既有 `/ai` 與 Cloudflare Worker 可繼續獨立運作。
 
 ## 已完成指令
 

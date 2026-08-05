@@ -10,6 +10,7 @@ import { normalizeChineseInteraction } from "./src/commands/localization.js";
 import { handleButton } from "./src/interactions/buttons.js";
 import { handleAdminInteraction, isAdminInteraction } from "./src/interactions/admin-panel.js";
 import { handleLaozuStateRequest } from "./src/integrations/laozu-state.js";
+import { handleDiscordMentionEvent } from "./src/integrations/discord-mentions.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -26,6 +27,9 @@ export default {
     }
     if (url.pathname === "/integrations/laozu-state") {
       return handleLaozuStateRequest(request, env);
+    }
+    if (url.pathname === "/integrations/discord-mentions") {
+      return handleDiscordMentionEvent(request, env);
     }
 
     const apiResponse = await handlePlatformApi(request, env, url);
