@@ -263,7 +263,9 @@ export async function editOriginalResponse(applicationId, token, content, option
     body: JSON.stringify({
       content: String(content || ""),
       ...(Array.isArray(options.components) ? { components: options.components } : {}),
-      allowed_mentions: { parse: [] }
+      allowed_mentions: Array.isArray(options.allowedUserIds)
+        ? { parse: [], users: options.allowedUserIds.map(String).slice(0, 100) }
+        : { parse: [] }
     })
   });
 }

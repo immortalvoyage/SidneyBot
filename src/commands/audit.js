@@ -13,6 +13,7 @@ const ACTION_LABELS = Object.freeze({
   "member.removed": "移除成員",
   "member.display_name_changed": "修改顯示名稱",
   "memory.cleared": "清除 AI 記憶",
+  "laozu.player_reprimanded": "老祖訓誡成員",
   "system.kv_indexes_repaired": "修復 KV 索引"
 });
 
@@ -45,6 +46,9 @@ function formatDetails(details) {
     displayName: "成員名稱",
     note: "備註",
     reason: "理由",
+    previousFavor: "原好感",
+    newFavor: "新好感",
+    favorDelta: "好感變動",
     gameBindingPreserved: "保留遊戲綁定",
     changedIndexes: "修復索引",
     restoredEntries: "補回索引數",

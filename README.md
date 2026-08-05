@@ -1,4 +1,4 @@
-# ☯【仙遊者】☯ Discord AI Bot V4.3.18
+# ☯【仙遊者】☯ Discord AI Bot V4.3.19
 
 完整獨立版，使用：
 
@@ -26,6 +26,7 @@
 - `/help`
 - `/game bind|status|pending|approve|reject`
 - `/audit recent|view`
+- `/laozu reprimand player:<玩家> affection:<1～5> reason:<原因>`
 - `/system check|repair`
 
 ## 宗門權限
@@ -40,6 +41,7 @@
 - 正式成員可用 `/profile set-name` 修改仙遊者名冊顯示名稱；不會修改 Discord 或遊戲角色名稱
 - `/game approve`、`/game reject` 只顯示 KV 中仍待審且仍是正式成員的申請者
 - `/audit` 只允許宗主私密查看最近操作紀錄與單筆詳情
+- `/laozu reprimand` 只允許宗主公開訓誡單一正式成員；程式明確扣除 1～5 點好感並寫入 Audit，AI 不得自行決定處罰
 - `/system check` 只讀檢查名冊、申請、Audit 與待審遊戲綁定索引；`/system repair` 經確認後只重建索引，不刪除實體資料
 - `/members` 使用宗主、長老、門徒、領民分組排版，每頁最多顯示 10 人；總覽隱藏 Discord ID，並提供按鈕翻頁、查找玩家及重新整理
 - `/approve`、`/member set-rank`、`/member remove`、`/system check`、`/system repair` 會先回覆私密等待狀態，再於背景更新結果，避免 Discord 首次回覆逾時

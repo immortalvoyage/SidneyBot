@@ -10,6 +10,7 @@ const ENGLISH_TO_CHINESE = Object.freeze({
   forget: "忘記",
   game: "遊戲",
   audit: "稽核",
+  laozu: "老祖",
   system: "系統",
   help: "幫助",
   question: "問題",
@@ -34,6 +35,8 @@ const ENGLISH_TO_CHINESE = Object.freeze({
   pending: "待審",
   recent: "最近",
   record: "紀錄",
+  reprimand: "訓誡",
+  affection: "好感扣除",
   check: "檢查",
   repair: "修復"
 });

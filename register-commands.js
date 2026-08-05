@@ -225,6 +225,41 @@ export const ENGLISH_COMMANDS = [
     ]
   },
   {
+    name: "laozu",
+    description: "老祖宗門互動與處置（宗主）",
+    options: [
+      {
+        name: "reprimand",
+        description: "公開訓誡一名正式成員並降低好感（宗主）",
+        type: 1,
+        options: [
+          {
+            name: "player",
+            description: "要由老祖訓誡的 Discord 玩家",
+            type: 6,
+            required: true
+          },
+          {
+            name: "affection",
+            description: "扣除好感度（1 至 5）",
+            type: 4,
+            required: true,
+            min_value: 1,
+            max_value: 5
+          },
+          {
+            name: "reason",
+            description: "訓誡原因",
+            type: 3,
+            required: true,
+            min_length: 2,
+            max_length: 300
+          }
+        ]
+      }
+    ]
+  },
+  {
     name: "system",
     description: "宗主私密檢查與修復系統資料索引",
     options: [

@@ -14,6 +14,7 @@ export const PLATFORM_EVENT_TYPES = Object.freeze({
   BIRTHDAY: "player.birthday",
   JOIN_ANNIVERSARY: "player.join_anniversary",
   FAVOR_CHANGED: "laozu.favor_changed",
+  PLAYER_REPRIMANDED: "laozu.player_reprimanded",
   TRUST_CHANGED: "laozu.trust_changed",
   GRUDGE_CHANGED: "laozu.grudge_changed",
   REDEEM_CODE_PUBLISHED: "redeem.published",

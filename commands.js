@@ -52,6 +52,7 @@ import { handleForget } from "./src/commands/forget.js";
 import { handleGame } from "./src/commands/game.js";
 import { handleAudit } from "./src/commands/audit.js";
 import { handleSystem } from "./src/commands/system.js";
+import { handleLaozu } from "./src/commands/laozu.js";
 import {
   parseMasterEnrollmentDialogue,
   processMasterEnrollmentDialogue
@@ -97,6 +98,9 @@ export async function handleCommand(
 
       case "audit":
         return await handleAudit(interaction, env);
+
+      case "laozu":
+        return await handleLaozu(interaction, env, ctx);
 
       case "system":
         return await handleSystem(interaction, env, ctx);
@@ -184,6 +188,7 @@ async function handleHelp(interaction, env) {
       "`/member remove player:<名冊玩家> confirm:<確認移除> note:<備註>`：將成員移出名冊",
       "`/audit recent`：查看最近 10 筆操作紀錄",
       "`/audit view record:<紀錄>`：查看單筆操作詳情",
+      "`/laozu reprimand player:<玩家> affection:<1～5> reason:<原因>`：由老祖公開訓誡玩家並降低好感",
       "`/system check`：檢查 KV 名冊與審核索引一致性",
       "`/system repair confirm:<確認修復>`：安全重建 KV 索引",
       "`/ai question:將 @玩家 加入仙遊者`：請老祖直接新增領民",
