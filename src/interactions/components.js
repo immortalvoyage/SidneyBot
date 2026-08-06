@@ -8,9 +8,9 @@ export const COMPONENT_IDS = Object.freeze({
 export function masterAdminPanelComponents() {
   const button = (action, label, emoji, style = 2) => ({ type: 2, style, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:${action}`, label, emoji: { name: emoji } });
   return [
-    { type: 1, components: [button("add", "新增領民", "👤", 3), button("bind", "主動綁定 UID", "🔗", 1), button("promote", "晉升長老", "⬆️", 1)] },
-    { type: 1, components: [button("demote", "退出百業／降領民", "⬇️"), button("view", "查看玩家", "🔎"), button("remove", "移出名冊", "🚪", 4)] },
-    { type: 1, components: [button("audit", "最近操作", "📝"), button("refresh", "重新整理", "🔄")] }
+    { type: 1, components: [button("add", "新增領民", "👤", 1), button("bind", "綁定 UID", "🔗", 1), button("promote", "晉升長老", "⬆️", 1)] },
+    { type: 1, components: [button("view", "查看成員", "🔎"), button("demote", "調整為領民", "⬇️"), button("remove", "移出名冊", "🚪", 4)] },
+    { type: 1, components: [button("audit", "操作紀錄", "📝"), button("refresh", "重新整理", "🔄")] }
   ];
 }
 

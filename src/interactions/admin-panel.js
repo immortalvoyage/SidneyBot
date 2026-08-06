@@ -10,11 +10,12 @@ import { approveGameBinding, getGameAccountByUser, requestGameBinding } from "..
 import { listAudits } from "../sect/audit.js";
 import { notifyMember } from "../sect/notifications.js";
 import { adminCandidateSelect, adminRemoveConfirmComponents, adminUidModal, COMPONENT_IDS, masterAdminPanelComponents } from "./components.js";
+import { isMasterAdminChannel } from "../platform/channels.js";
 
 const PREFIX = `${COMPONENT_IDS.ADMIN_PREFIX}:`;
 
 async function requireMaster(interaction, env) {
-  if (String(interaction.channel_id || "") !== String(env.MASTER_ADMIN_CHANNEL_ID || "")) throw new Error("此管理面板只能在宗主審批私人頻道使用");
+  if (!isMasterAdminChannel(interaction.channel_id)) throw new Error("此管理面板只能在宗主審批私人頻道使用");
   const actor = await resolveActor(env, getUser(interaction));
   if (!actor || !isSectMaster(actor.userId, env) || actor.rank !== RANK.MASTER) throw new Error("只有宗主可以使用此管理面板");
   return actor;
@@ -57,7 +58,7 @@ export async function handleAdminInteraction(interaction, env, ctx) {
       return candidateResponse(interaction, env, action, page, true);
     }
     if (key === "audit") return recentAudit(env);
-    if (key === "refresh") return updateMessageResponse({ content: "☯ **仙遊者・宗主管理面板**\n面板已重新整理。所有操作都會驗證宗主身分並留下紀錄。", components: masterAdminPanelComponents() });
+    if (key === "refresh") return updateMessageResponse({ content: "## ☯ 仙遊者｜宗主管理中心\n面板已重新整理。所有操作都會驗證宗主身分並留下紀錄。", components: masterAdminPanelComponents() });
     if (key === "cancel") return updateMessageResponse({ content: "已取消操作。", components: [] });
     if (key.startsWith("select-candidate:")) {
       const action = key.split(":")[1];

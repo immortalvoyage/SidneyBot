@@ -36,6 +36,15 @@ test("宗主管理面板提供手機常用操作按鈕", () => {
   }
 });
 
+test("宗主管理面板採用一致的專業操作層級且保留既有 Custom ID", () => {
+  const rows = masterAdminPanelComponents();
+  assert.deepEqual(rows[0].components.map(item => item.style), [1, 1, 1]);
+  assert.deepEqual(rows[1].components.map(item => item.style), [2, 2, 4]);
+  assert.deepEqual(rows[2].components.map(item => item.style), [2, 2]);
+  assert.equal(rows[0].components[1].custom_id, "sidney:admin:v1:bind");
+  assert.equal(rows[1].components[2].custom_id, "sidney:admin:v1:remove");
+});
+
 test("沒有合格候選人時輸出合法且停用的選單", () => {
   const menu = adminCandidateSelect("bind", [])[0].components[0];
   assert.equal(menu.disabled, true);

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { handlePanel } from "../src/commands/panel.js";
 
-function interaction(type, channelId = "master-channel") {
+function interaction(type, channelId = "1534238116099919933") {
   return {
     channel_id: channelId,
     member: { user: { id: "master-user", username: "master" } },
@@ -16,7 +16,7 @@ function interaction(type, channelId = "master-channel") {
 function env() {
   const values = new Map();
   return {
-    MASTER_ADMIN_CHANNEL_ID: "master-channel",
+    MASTER_ADMIN_CHANNEL_ID: "wrong-config-must-not-open-admin-panel",
     SECT_MASTER_ID: "master-user",
     DISCORD_BOT_TOKEN: "test-token",
     DISCORD_API_BASE: "https://discord.test/api/v10",
@@ -65,8 +65,15 @@ test("bare /panel preserves the existing admin-channel behavior", async () => {
 
   try {
     await handlePanel(interaction(undefined), env());
-    assert.match(body.content, /宗主管理面板/);
+    assert.match(body.content, /宗主管理中心/);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("explicit admin panel is rejected outside the fixed master approval channel", async () => {
+  const response = await handlePanel(interaction("admin", "other-channel"), env());
+  const responseBody = await response.json();
+  assert.match(responseBody.data.content, /只能建立在宗主審批私人頻道/);
+  assert.equal(responseBody.data.flags, 64);
 });

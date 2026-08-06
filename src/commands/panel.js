@@ -4,21 +4,30 @@ import { resolveActor } from "../sect/service.js";
 import { canApprove } from "../sect/permissions.js";
 import { dailyGreetingComponents, masterAdminPanelComponents } from "../interactions/components.js";
 import { isSectMaster } from "../sect/permissions.js";
+import { isMasterAdminChannel } from "../platform/channels.js";
 
 export async function handlePanel(interaction, env) {
   try {
     const actor = await resolveActor(env, getUser(interaction));
     const panelType = interaction.data?.options?.find(option => option.name === "type")?.value;
-    const isAdminChannel = String(interaction.channel_id || "") === String(env.MASTER_ADMIN_CHANNEL_ID || "");
+    const isAdminChannel = isMasterAdminChannel(interaction.channel_id);
     const wantsAdminPanel = panelType === "admin" || (!panelType && isAdminChannel);
 
     if (wantsAdminPanel) {
       if (!actor || !isSectMaster(actor.userId, env)) throw new Error("只有宗主可以建立宗主管理面板");
       if (!isAdminChannel) throw new Error("宗主管理面板只能建立在宗主審批私人頻道");
       await sendChannelMessage(interaction.channel_id, env.DISCORD_BOT_TOKEN, [
-        "☯ **仙遊者・宗主管理面板**",
-        "手機可直接使用按鈕與玩家選單；所有操作都會再次驗證宗主身分並寫入操作紀錄。",
-        "UID 綁定會將領民升為門徒；退出百業會降為領民但保留 UID 與歷史資料。"
+        "## ☯ 仙遊者｜宗主管理中心",
+        "管理成員名冊、燕雲 UID 與宗門身分。",
+        "",
+        "**成員與身分**",
+        "新增領民・綁定 UID・晉升或調整身分",
+        "",
+        "**名冊與紀錄**",
+        "查看成員資料・查閱最近操作・重新整理面板",
+        "",
+        "> 所有操作都會再次驗證宗主身分並寫入紀錄。",
+        "> 綁定 UID 後升為門徒；退出百業時保留 UID 與歷史資料。"
       ].join("\n"), { components: masterAdminPanelComponents() });
       return immediateResponse("✅ 宗主管理面板已建立。", true);
     }
