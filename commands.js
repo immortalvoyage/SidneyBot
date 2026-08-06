@@ -246,6 +246,7 @@ function helpTopic(topic, rank) {
   if (topic === "admin" && canManageRanks(rank)) {
     return [
       "### 宗主管理",
+      "`/panel`　在非宗主審批頻道建立老祖每日請安面板",
       "`/member get`　查看成員詳細資料",
       "`/member set-rank`　調整成員身分",
       "`/member remove`　將成員移出名冊",

@@ -105,6 +105,7 @@ test("設定中的宗主自動建檔並看到完整管理功能", async () => {
 test("宗主管理與系統維護分頁不混在首頁", async () => {
   const env = createEnv();
   const admin = await helpContent(env, "master-1", "admin");
+  assert.match(admin, /\/panel.*老祖每日請安面板/);
   assert.match(admin, /\/member get|\/member set-rank|\/member remove|\/laozu reprimand/);
   assert.doesNotMatch(admin, /\/system check|\/system repair|\/review/);
 
