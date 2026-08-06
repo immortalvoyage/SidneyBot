@@ -8,8 +8,13 @@ import { isSectMaster } from "../sect/permissions.js";
 export async function handlePanel(interaction, env) {
   try {
     const actor = await resolveActor(env, getUser(interaction));
-    if (String(interaction.channel_id || "") === String(env.MASTER_ADMIN_CHANNEL_ID || "")) {
+    const panelType = interaction.data?.options?.find(option => option.name === "type")?.value;
+    const isAdminChannel = String(interaction.channel_id || "") === String(env.MASTER_ADMIN_CHANNEL_ID || "");
+    const wantsAdminPanel = panelType === "admin" || (!panelType && isAdminChannel);
+
+    if (wantsAdminPanel) {
       if (!actor || !isSectMaster(actor.userId, env)) throw new Error("只有宗主可以建立宗主管理面板");
+      if (!isAdminChannel) throw new Error("宗主管理面板只能建立在宗主審批私人頻道");
       await sendChannelMessage(interaction.channel_id, env.DISCORD_BOT_TOKEN, [
         "☯ **仙遊者・宗主管理面板**",
         "手機可直接使用按鈕與玩家選單；所有操作都會再次驗證宗主身分並寫入操作紀錄。",

@@ -20,3 +20,16 @@ test("all registered commands defer custom-role authorization to the Worker", ()
     assert.equal(command.default_member_permissions, null, `/${command.name}`);
   }
 });
+
+test("/panel keeps its name and offers explicit greeting/admin panel selection", () => {
+  const panel = COMMANDS.find(command => command.name === "panel");
+
+  assert.ok(panel, "/panel must remain registered");
+  assert.equal(panel.options.length, 1);
+  assert.equal(panel.options[0].name, "type");
+  assert.equal(panel.options[0].required, false);
+  assert.deepEqual(panel.options[0].choices, [
+    { name: "每日請安", value: "greeting" },
+    { name: "宗主管理", value: "admin" }
+  ]);
+});

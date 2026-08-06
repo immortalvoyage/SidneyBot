@@ -68,7 +68,19 @@ export const ENGLISH_COMMANDS = [
   },
   {
     name: "panel",
-    description: "在目前頻道建立老祖互動面板（宗主／長老）"
+    description: "在目前頻道建立老祖互動面板（宗主／長老）",
+    options: [
+      {
+        name: "type",
+        description: "指定要建立的面板；未指定時沿用目前頻道的既有判斷",
+        type: 3,
+        required: false,
+        choices: [
+          { name: "每日請安", value: "greeting" },
+          { name: "宗主管理", value: "admin" }
+        ]
+      }
+    ]
   },
   {
     name: "members",
