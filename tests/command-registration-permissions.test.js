@@ -33,3 +33,11 @@ test("/panel keeps its name and offers explicit greeting/admin panel selection",
     { name: "宗主管理", value: "admin" }
   ]);
 });
+
+test("registration only keeps one English command for each function", () => {
+  assert.equal(new Set(COMMANDS.map(command => command.name)).size, COMMANDS.length);
+  assert.ok(COMMANDS.every(command => /^[a-z0-9_-]+$/.test(command.name)));
+  assert.equal(COMMANDS.length, 14);
+  const help = COMMANDS.find(command => command.name === "help");
+  assert.deepEqual(help.options, undefined);
+});
