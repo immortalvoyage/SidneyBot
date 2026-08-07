@@ -57,10 +57,10 @@ test("預設權限目錄沒有重複主指令且記錄 help 刊登分類", async
 
 test("宗主修改身分後會同步影響實際可執行權限", async () => {
   const env = createEnv();
-  assert.equal(await canUseCommand(env, "audit", RANK.ELDER), false);
-  await setCommandRoles(env, "audit", [RANK.ELDER, RANK.MASTER]);
-  assert.equal(await canUseCommand(env, "audit", RANK.ELDER), true);
-  assert.equal(await canUseCommand(env, "audit", RANK.DISCIPLE), false);
+  assert.equal(await canUseCommand(env, "ai", RANK.RESIDENT), true);
+  await setCommandRoles(env, "ai", [RANK.DISCIPLE, RANK.ELDER, RANK.MASTER]);
+  assert.equal(await canUseCommand(env, "ai", RANK.RESIDENT), false);
+  assert.equal(await canUseCommand(env, "ai", RANK.DISCIPLE), true);
 });
 
 test("玩家看不到沒有權限的管理指令", async () => {
