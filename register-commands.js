@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createChineseCommands } from "./src/commands/localization.js";
 
 loadLocalEnvironment();
 
@@ -326,33 +325,12 @@ export const ENGLISH_COMMANDS = [
       }
     ]
   },
-  {
-    name: "help",
-    description: "依目前身分私密查看 Bot 使用說明",
-    options: [
-      {
-        name: "topic",
-        description: "選擇要查看的功能分類；不選則顯示身分首頁",
-        type: 3,
-        required: false,
-        choices: [
-          { name: "基本功能", value: "basic" },
-          { name: "遊戲綁定", value: "game" },
-          { name: "審核工作", value: "review" },
-          { name: "宗主管理", value: "admin" },
-          { name: "系統維護", value: "system" }
-        ]
-      }
-    ]
-  }
+  { name: "help", description: "使用按鈕私密查看可用指令" }
 ];
 
 // Custom sect roles cannot be represented by Discord permission bits. Keep every
 // command available at Discord's registration layer and authorize ranks in the Worker.
-export const COMMANDS = [
-  ...ENGLISH_COMMANDS,
-  ...createChineseCommands(ENGLISH_COMMANDS)
-].map(command => ({
+export const COMMANDS = ENGLISH_COMMANDS.map(command => ({
   ...command,
   default_member_permissions: null,
   dm_permission: false
