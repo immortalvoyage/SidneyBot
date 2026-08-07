@@ -48,6 +48,7 @@ function formatOwnProfile(profile) {
     `方便時間：${profile.availability || "請私下協調"}`,
     profile.note ? `備註：${profile.note}` : "備註：無",
     `最後更新：${profile.updatedAt || "-"}`,
+    "每位仙友只保留一筆公開刊登；重新刊登時，本座會先列出現有內容與新內容，確認後才取代。",
     "可直接對本座說「修改我的刊登 專長：A、B，方便時間：晚上」或「刪除我的刊登」。"
   ].join("\n");
 }
@@ -62,6 +63,26 @@ function ownListingIntent(question) {
   if (editListing) return "edit";
   if (viewListing) return "view";
   return "";
+}
+
+function normalizedProfileData(profile) {
+  return {
+    skills: String(profile?.skills || (profile?.skillList || []).join("、") || "").trim(),
+    availability: String(profile?.availability || "請私下協調").trim(),
+    note: String(profile?.note || "").trim()
+  };
+}
+
+function sameListing(current, draft) {
+  const left = normalizedProfileData(current);
+  const right = normalizedProfileData({
+    skills: (draft?.skillList || []).join("、"),
+    availability: draft?.availability,
+    note: draft?.note
+  });
+  return left.skills === right.skills
+    && left.availability === right.availability
+    && left.note === right.note;
 }
 
 async function processOwnListingManagement(env, { guildId, member, question }) {
@@ -107,31 +128,66 @@ async function processOwnListingManagement(env, { guildId, member, question }) {
   ].join("\n");
 }
 
-async function processMatchListingChat(env, { guildId, member, question }) {
+export async function processMatchListingChat(env, { guildId, member, question }) {
   const draft = parseMatchProfileDraft(question);
   const explicitConsent = /(確認刊登|確認公開|同意刊登|同意公開|幫我刊登|可以公開|公開吧)/u.test(question);
-  const simpleConfirm = /^(確認|同意|可以|好|好的|ok|OK)$/u.test(question.trim());
-  const cancel = /^(取消|不要刊登|取消刊登|不要公開)$/u.test(question.trim());
+  const simpleConfirm = /^(確認|確認更新|同意|可以|好|好的|ok|OK)$/u.test(question.trim());
+  const cancel = /^(取消|不要刊登|取消刊登|不要公開|取消更新)$/u.test(question.trim());
 
   if (cancel && await getMatchProfileDraft(env, guildId, member.userId)) {
     await discardMatchProfileDraft(env, guildId, member.userId);
-    return "✅ 已取消這次專長刊登草稿，沒有公開任何資料。";
+    return "✅ 已取消這次專長刊登草稿，現有公開刊登沒有變更。";
   }
 
   if ((simpleConfirm || explicitConsent) && !draft) {
+    const before = await getMatchProfile(env, guildId, member.userId);
+    const pending = await getMatchProfileDraft(env, guildId, member.userId);
     const profile = await confirmMatchProfileDraft(env, { guildId, member });
     if (profile) {
+      const replaced = Boolean(before?.consent && pending);
       return [
-        "✅ 已完成公開刊登，資料已實際寫入媒合資料庫。",
+        replaced
+          ? "✅ 已確認更新。舊刊登已由這筆新資料取代；每位仙友仍只保留一筆公開刊登。"
+          : "✅ 已完成公開刊登，資料已實際寫入媒合資料庫。",
         `專長：${profile.skills}`,
         `方便時間：${profile.availability}`,
         profile.note ? `備註：${profile.note}` : null,
-        "之後其他仙友詢問相符需求時，老祖可以依好感度優先介紹；可用 `/laozu withdraw` 隨時撤回。"
+        "之後其他仙友詢問相符需求時，老祖可以依好感度優先介紹；可隨時查看、修改或刪除自己的刊登。"
       ].filter(Boolean).join("\n");
     }
   }
 
   if (!draft) return null;
+
+  const current = await getMatchProfile(env, guildId, member.userId);
+  if (current?.consent) {
+    if (sameListing(current, draft)) {
+      await discardMatchProfileDraft(env, guildId, member.userId);
+      return [
+        "你目前已經有一筆公開刊登，而且內容與這次提供的資料相同，因此不需要更新。",
+        `專長：${current.skills}`,
+        `方便時間：${current.availability}`,
+        current.note ? `備註：${current.note}` : "備註：無"
+      ].join("\n");
+    }
+
+    const saved = await saveMatchProfileDraft(env, { guildId, member, draft });
+    return [
+      "你目前已經有一筆公開刊登。本座不會新增第二筆；請先確認是否要用新內容**取代現有刊登**。",
+      "",
+      "**目前公開內容**",
+      `專長：${current.skills || (current.skillList || []).join("、")}`,
+      `方便時間：${current.availability || "請私下協調"}`,
+      current.note ? `備註：${current.note}` : "備註：無",
+      "",
+      "**準備更新為**",
+      `專長：${saved.skillList.join("、")}`,
+      `方便時間：${saved.availability}`,
+      saved.note ? `備註：${saved.note}` : "備註：無",
+      "",
+      "若確定要取代，直接回覆「確認更新」；若不改，回覆「取消更新」。"
+    ].join("\n");
+  }
 
   if (explicitConsent) {
     const profile = await publishMatchProfile(env, {
@@ -156,7 +212,7 @@ async function processMatchListingChat(env, { guildId, member, question }) {
     `專長：${saved.skillList.join("、")}`,
     `方便時間：${saved.availability}`,
     saved.note ? `備註：${saved.note}` : null,
-    "一個人可以刊登多項專長，用「、」或逗號分隔即可。",
+    "一個人可以刊登多項專長，但只保留一筆公開刊登。",
     "若內容正確，直接回覆「確認」；本座會在實際寫入成功後明確回覆「已完成公開刊登」。"
   ].filter(Boolean).join("\n");
 }
@@ -179,6 +235,9 @@ async function buildAutonomyContext(env, { guildId, userId, question }) {
     const currentProfile = await getMatchProfile(env, guildId, userId);
     if (!currentProfile?.consent) {
       blocks.push("玩家正在談換工作、兼職、副業、接案或類似機會，而且目前沒有公開媒合資料。請主動但不強迫地問她／他是否要讓你協助刊登可公開的多項能力、方便時間與備註；必須取得明確同意後才能公開。玩家也可以直接用自然語句告訴你『我擅長 A、B，接案時間晚上』建立草稿，再回覆『確認』完成刊登。");
+    } else {
+      blocks.push("玩家目前已經有一筆公開專長刊登。若玩家想再次刊登新的能力資料，不要直接說已刊登而結束；應提醒每人只保留一筆，並引導他提供新內容，由程式列出舊資料與新資料，確認後再取代。"
+      );
     }
   }
 
