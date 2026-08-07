@@ -58,7 +58,8 @@ export function detectLaozuConversationIntent(input) {
   const career = /(換(個)?工作|找工作|轉職|兼職|副業|接案|打工|開小差|想賺點外快|有沒有工作機會|求職)/u.test(text);
   const asksForPeople = /(找|需要|徵|缺).{0,12}(人|人才|幫手|工程師|設計師|程式設計師|美術|剪輯|翻譯|會計|顧問|開發者)/u.test(text)
     || /(有沒有|誰會|誰可以|誰能|有誰|誰的專長|誰擅長|不知道有誰).{0,24}(幫忙|協助|做|處理|設計|開發|寫程式|剪輯|翻譯|專長|擅長|陪|打混|摸魚)/u.test(text)
-    || /(專長|擅長).{0,12}(是|有).{0,30}(誰|哪位|仙友)/u.test(text);
+    || /(專長|擅長).{0,12}(是|有).{0,30}(誰|哪位|仙友)/u.test(text)
+    || /(找誰|該找誰|要找誰|問誰|該問誰|請教誰|找哪位|問哪位|請教哪位)/u.test(text);
   const capabilityRequest = /(老祖|妳|你).{0,10}(能不能|可不可以|可以幫|希望|應該要|最好能|怎麼不能|為什麼不能|如果能).{1,120}/u.test(text)
     || /(希望|建議).{0,16}(老祖|系統|平台).{0,80}(可以|能|支援|新增)/u.test(text);
   return { career, asksForPeople, capabilityRequest };
