@@ -29,5 +29,14 @@ npm run register
 只要 Token 沒有更換，不需要再次執行設定；新增或修改 Slash Commands 後直接執行：
 
 ```powershell
-npm run register
+npm run release:check
 ```
+
+確認所有項目與完整測試均通過後，再依序執行：
+
+```powershell
+npm run register
+npm run deploy
+```
+
+`release:check` 只檢查環境變數名稱，不會顯示 Token 或 Secret 的內容。若提示本機與 `origin/main` 不一致，先回到 GitHub Desktop 執行 `Fetch origin` 與 `Pull origin`。

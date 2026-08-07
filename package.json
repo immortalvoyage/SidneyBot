@@ -8,6 +8,7 @@
     "check": "node scripts/check-syntax.js",
     "test": "node --test tests/*.test.js",
     "register": "node register-commands.js",
+    "release:check": "node scripts/release-preflight.js && npm run check && npm test",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "setup:discord": "powershell -ExecutionPolicy Bypass -File scripts/setup-discord-local.ps1",
