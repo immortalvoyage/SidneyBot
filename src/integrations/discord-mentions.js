@@ -18,6 +18,12 @@ import {
   withdrawMatchProfile
 } from "../platform/laozu-matchmaking.js";
 import { detectLaozuConversationIntent, recordCapabilitySuggestion } from "../platform/laozu-autonomy.js";
+import {
+  extractMentionedUserIds,
+  formatSharedEventContext,
+  loadSharedLaozuEvents,
+  recordSharedLaozuEvent
+} from "../platform/laozu-shared-events.js";
 
 const MAX_AGE_SECONDS = 300;
 
@@ -217,9 +223,12 @@ export async function processMatchListingChat(env, { guildId, member, question }
   ].filter(Boolean).join("\n");
 }
 
-async function buildAutonomyContext(env, { guildId, userId, question }) {
+async function buildAutonomyContext(env, { guildId, userId, question, sharedEvents = [] }) {
   const intent = detectLaozuConversationIntent(question);
   const blocks = [];
+
+  const sharedContext = formatSharedEventContext(sharedEvents, userId);
+  if (sharedContext) blocks.push(sharedContext);
 
   if (intent.asksForPeople) {
     const matches = await findMatchProfiles(env, {
@@ -283,6 +292,7 @@ export async function handleDiscordMentionEvent(request, env) {
   let payload;
   try { payload = JSON.parse(body); } catch { return json({ error: "invalid_json" }, 400); }
   const guildId = cleanSnowflake(payload.guildId) || "dm";
+  const channelId = cleanSnowflake(payload.channelId);
   const userId = cleanSnowflake(payload.userId);
   const botUserId = cleanSnowflake(payload.botUserId);
   const question = extractMentionQuestion(payload.content, botUserId);
@@ -302,6 +312,24 @@ export async function handleDiscordMentionEvent(request, env) {
     getPlayerState(env, userId)
   ]);
 
+  const mentionedUserIds = extractMentionedUserIds(payload.content, botUserId).filter(id => id !== userId);
+  const sharedEvents = guildId === "dm" ? [] : await loadSharedLaozuEvents(env, {
+    guildId,
+    userIds: [userId, ...mentionedUserIds],
+    excludeEventId: eventId
+  });
+
+  if (guildId !== "dm" && mentionedUserIds.length) {
+    await recordSharedLaozuEvent(env, {
+      guildId,
+      channelId,
+      actorId: userId,
+      participantIds: mentionedUserIds,
+      eventId,
+      text: question
+    });
+  }
+
   const managementReply = await processOwnListingManagement(env, { guildId, member, question });
   if (managementReply) {
     await finishChat(env, { guildId, userId, question, answer: managementReply, eventId });
@@ -317,7 +345,7 @@ export async function handleDiscordMentionEvent(request, env) {
     }
   }
 
-  const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question });
+  const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question, sharedEvents });
   const answer = await askGemini(enrichedQuestion, env, history, profile, member, playerState);
   await finishChat(env, { guildId, userId, question, answer, eventId });
   return json({ ok: true, reply: answer });

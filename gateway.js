@@ -56,7 +56,15 @@ async function handleMessage(message) {
   lastEventAt = new Date().toISOString();
   if (!botUserId || message.author?.bot || !String(message.content || "").match(new RegExp(`<@!?${botUserId}>`))) return;
   if (allowedChannels.size && !allowedChannels.has(String(message.channel_id))) return;
-  const body = JSON.stringify({ guildId: message.guild_id || "dm", channelId: message.channel_id, messageId: message.id, userId: message.author.id, botUserId, content: message.content });
+  const body = JSON.stringify({
+    guildId: message.guild_id || "dm",
+    channelId: message.channel_id,
+    messageId: message.id,
+    userId: message.author.id,
+    botUserId,
+    content: message.content,
+    mentionedUserIds: (message.mentions || []).map(user => user.id)
+  });
   const timestamp = String(Math.floor(Date.now() / 1000));
   const eventId = `discord-${message.id}`;
   const signature = createHmac("sha256", secret).update(`${timestamp}.${eventId}.${body}`).digest("hex");
