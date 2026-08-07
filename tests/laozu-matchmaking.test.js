@@ -1,8 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  confirmMatchProfileDraft,
   findMatchProfiles,
+  getMatchProfile,
+  normalizeSkills,
+  parseMatchProfileDraft,
   publishMatchProfile,
+  saveMatchProfileDraft,
   withdrawMatchProfile
 } from "../src/platform/laozu-matchmaking.js";
 
@@ -41,6 +46,28 @@ test("沒有明確同意時拒絕刊登媒合資料", async () => {
   );
 });
 
+test("一位玩家可以同時刊登多項專長", async () => {
+  assert.deepEqual(normalizeSkills("程式設計、打混摸魚，副本教學"), ["程式設計", "打混摸魚", "副本教學"]);
+  const storage = env();
+  const profile = await publishMatchProfile(storage, {
+    guildId: "guild", member: members[1], skills: "程式設計、打混摸魚，副本教學",
+    availability: "隨時", consent: "AGREE"
+  });
+  assert.deepEqual(profile.skillList, ["程式設計", "打混摸魚", "副本教學"]);
+  assert.equal(profile.skills, "程式設計、打混摸魚、副本教學");
+});
+
+test("自然聊天可建立草稿並在確認後實際刊登", async () => {
+  const storage = env();
+  const draft = parseMatchProfileDraft("我擅長打混摸魚、程式設計，接案時間：隨時");
+  assert.deepEqual(draft.skillList, ["打混摸魚", "程式設計"]);
+  await saveMatchProfileDraft(storage, { guildId: "guild", member: members[1], draft });
+  assert.equal(await getMatchProfile(storage, "guild", "2"), null);
+  const published = await confirmMatchProfileDraft(storage, { guildId: "guild", member: members[1] });
+  assert.equal(published.skills, "打混摸魚、程式設計");
+  assert.equal((await getMatchProfile(storage, "guild", "2")).consent, true);
+});
+
 test("只媒合已同意公開且符合需求的其他成員", async () => {
   const storage = env();
   await publishMatchProfile(storage, {
@@ -57,6 +84,19 @@ test("只媒合已同意公開且符合需求的其他成員", async () => {
   assert.equal(matches.length, 1);
   assert.equal(matches[0].userId, "2");
   assert.equal(matches[0].consent, true);
+});
+
+test("聊天說誰的專長是打混摸魚也能找到已刊登玩家", async () => {
+  const storage = env();
+  await publishMatchProfile(storage, {
+    guildId: "guild", member: members[1], skills: "打混摸魚、程式設計",
+    availability: "隨時", consent: "AGREE"
+  });
+  const matches = await findMatchProfiles(storage, {
+    guildId: "guild", requesterId: "1", need: "最近好無聊，不知道有誰的專長是打混摸魚的，想找來陪我", members
+  });
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].userId, "2");
 });
 
 test("符合需求時依老祖好感度優先並最多回傳三人", async () => {
