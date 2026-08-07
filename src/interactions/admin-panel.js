@@ -237,7 +237,7 @@ async function handleRosterSelectionData(interaction, env, actor, action, userId
 async function handleSelection(interaction, env, actor, action, selectedMember = null) {
   const target = selectedMember ? { id: selectedMember.userId, username: selectedMember.username, displayName: selectedMember.displayName } : selectedUser(interaction);
   if (!target.id) throw new Error("沒有選到玩家");
-  const sync = (userId, rank) => syncDiscordMemberRank(env, interaction.guild_id, id, rank);
+  const sync = (userId, rank) => syncDiscordMemberRank(env, interaction.guild_id, userId, rank);
   if (action === "add") {
     const result = await enrollMemberByMaster(env, actor, target, RANK.RESIDENT, "由宗主管理面板新增領民", sync);
     if (!result.created) throw new Error("該玩家已在仙遊者名冊中");
