@@ -5,6 +5,8 @@ export function buildHealthPayload(env = {}) {
     version: String(env.APP_VERSION || "4.3.22"),
     capabilities: {
       slashCommands: true,
+      laozuMemoryControls: true,
+      laozuSpeakerIdentityGrounding: true,
       laozuMoodState: Boolean(env.SIDNEY_STATE_API_TOKEN),
       laozuMentions: Boolean(env.DISCORD_GATEWAY_SECRET),
       redeemAnnouncements: Boolean(env.SIDNEY_REDEEM_SECRET)

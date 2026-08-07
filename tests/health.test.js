@@ -12,6 +12,8 @@ test("health payload reports deployed capabilities without exposing secrets", ()
   assert.equal(payload.version, "4.3.22");
   assert.deepEqual(payload.capabilities, {
     slashCommands: true,
+    laozuMemoryControls: true,
+    laozuSpeakerIdentityGrounding: true,
     laozuMoodState: true,
     laozuMentions: true,
     redeemAnnouncements: false
