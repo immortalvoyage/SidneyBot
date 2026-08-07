@@ -1,4 +1,4 @@
-import { listCommandPolicies, setCommandRoles, EDITABLE_RANKS, rankLabel } from "../commands/command-access.js";
+import { listCommandPolicies, setCommandRoles, rankLabel } from "../commands/command-access.js";
 
 export function commandPolicyListComponents(policies) {
   const options = policies.slice(0, 25).map(command => ({
@@ -16,8 +16,8 @@ export function commandRoleComponents(policy) {
       custom_id: `sidney:admin:v1:command-roles:${policy.name}`,
       placeholder: "選擇可使用的身分組",
       min_values: 1,
-      max_values: EDITABLE_RANKS.length,
-      options: EDITABLE_RANKS.map(rank => ({ label: rankLabel(rank), value: rank, default: policy.roles.includes(rank) }))
+      max_values: policy.allowedRoles.length,
+      options: policy.allowedRoles.map(rank => ({ label: rankLabel(rank), value: rank, default: policy.roles.includes(rank) }))
     }] },
     { type: 1, components: [{ type: 2, style: 2, custom_id: "sidney:admin:v1:command-permissions", label: "返回指令總表", emoji: { name: "↩️" } }] }
   ];
@@ -30,7 +30,7 @@ export function commandPolicyText(policy) {
     `可使用身分：**${policy.roles.map(rankLabel).join("、")}**`,
     `刊登位置：**/help → ${helpLabel(policy.help)}**`,
     "",
-    "下方可直接複選身分；儲存後會同步影響實際執行權限與 /help 顯示。"
+    "下方可直接複選安全範圍內的身分；儲存後會同步影響實際執行權限與 /help 顯示。"
   ].join("\n");
 }
 
