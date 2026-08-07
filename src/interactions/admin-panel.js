@@ -22,6 +22,7 @@ import {
 import { isMasterAdminChannel } from "../platform/channels.js";
 import { listCapabilitySuggestions, resolveCapabilitySuggestion } from "../platform/laozu-autonomy.js";
 import { getMatchProfile, listMatchProfiles, withdrawMatchProfile } from "../platform/laozu-matchmaking.js";
+import { commandPolicyList, selectCommandPolicy, updateCommandPolicy } from "./command-permissions.js";
 
 const PREFIX = `${COMPONENT_IDS.ADMIN_PREFIX}:`;
 
@@ -68,6 +69,9 @@ export async function handleAdminInteraction(interaction, env, ctx) {
       const [, action, page] = key.split(":");
       return candidateResponse(interaction, env, action, page, true);
     }
+    if (key === "command-permissions") return updateMessageResponse(await commandPolicyList(env));
+    if (key === "command-select") return updateMessageResponse(await selectCommandPolicy(env, String(interaction.data?.values?.[0] || "")));
+    if (key.startsWith("command-roles:")) return updateMessageResponse(await updateCommandPolicy(env, key.slice("command-roles:".length), interaction.data?.values || []));
     if (key === "match-profiles") return matchProfilesResponse(interaction, env);
     if (key === "match-profile-select") return matchProfileDetailsResponse(interaction, env);
     if (key.startsWith("match-profile-remove:")) return removeMatchProfileResponse(interaction, env, key.slice("match-profile-remove:".length));
