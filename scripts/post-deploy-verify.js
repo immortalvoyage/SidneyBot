@@ -23,6 +23,10 @@ export function inspectRegisteredCommands(commands) {
   return [{ ok: Boolean(memory), message: "Discord 已註冊 /laozu memory" }];
 }
 
+export function resolveWorkerUrl(environment = process.env, packageJson = {}) {
+  return String(environment.WORKER_PUBLIC_URL || packageJson.release?.workerPublicUrl || "").replace(/\/$/, "");
+}
+
 function loadLocalEnvironment(path = ".dev.vars") {
   if (!existsSync(path)) return;
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -40,7 +44,7 @@ async function fetchJson(url, options = {}) {
 async function run() {
   loadLocalEnvironment();
   const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
-  const workerUrl = String(process.env.WORKER_PUBLIC_URL || "").replace(/\/$/, "");
+  const workerUrl = resolveWorkerUrl(process.env, packageJson);
   const applicationId = process.env.DISCORD_APPLICATION_ID;
   const guildId = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;

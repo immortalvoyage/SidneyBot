@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "ImmortalVoyage Platform - 仙遊者 Discord 模組（Cloudflare Workers + Gemini + KV）",
+  "release": {
+    "workerPublicUrl": "https://sidney-discord-ai-bot.mygame-sidney.workers.dev"
+  },
   "scripts": {
     "check": "node scripts/check-syntax.js",
     "test": "node --test tests/*.test.js",
