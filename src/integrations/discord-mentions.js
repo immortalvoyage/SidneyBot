@@ -11,8 +11,11 @@ import {
   getMatchProfile,
   getMatchProfileDraft,
   parseMatchProfileDraft,
+  parseMatchProfilePatch,
   publishMatchProfile,
-  saveMatchProfileDraft
+  saveMatchProfileDraft,
+  updateMatchProfile,
+  withdrawMatchProfile
 } from "../platform/laozu-matchmaking.js";
 import { detectLaozuConversationIntent, recordCapabilitySuggestion } from "../platform/laozu-autonomy.js";
 
@@ -37,10 +40,74 @@ function matchContext(matches) {
   ].join("\n");
 }
 
-async function processMatchListingChat(env, { guildId, member, question, intent }) {
-  // 找人需求永遠優先於刊登解析，避免「誰的專長是 X」被誤判成自己要刊登 X。
-  if (intent?.asksForPeople) return null;
+function formatOwnProfile(profile) {
+  if (!profile?.consent) return "你目前沒有已公開的專長刊登。";
+  return [
+    "## 📋 你的專長刊登",
+    `專長：${profile.skills || (profile.skillList || []).join("、") || "-"}`,
+    `方便時間：${profile.availability || "請私下協調"}`,
+    profile.note ? `備註：${profile.note}` : "備註：無",
+    `最後更新：${profile.updatedAt || "-"}`,
+    "可直接對本座說「修改我的刊登 專長：A、B，方便時間：晚上」或「刪除我的刊登」。"
+  ].join("\n");
+}
 
+function ownListingIntent(question) {
+  const text = String(question || "").trim();
+  const deleteListing = /(刪除|撤回|撤下|下架).{0,10}(我的)?(?:專長)?刊登/u.test(text);
+  const editListing = /(修改|編輯|更新|更改|改一下|改).{0,10}(我的)?(?:專長)?刊登/u.test(text);
+  const viewListing = /(查看|看看|顯示|查詢|看一下).{0,10}(我的)?(?:專長)?刊登/u.test(text)
+    || /^我的(?:專長)?刊登(?:內容|資料)?[？?]?$/u.test(text);
+  if (deleteListing) return "delete";
+  if (editListing) return "edit";
+  if (viewListing) return "view";
+  return "";
+}
+
+async function processOwnListingManagement(env, { guildId, member, question }) {
+  const action = ownListingIntent(question);
+  if (!action) return null;
+
+  if (action === "view") {
+    return formatOwnProfile(await getMatchProfile(env, guildId, member.userId));
+  }
+
+  if (action === "delete") {
+    const current = await getMatchProfile(env, guildId, member.userId);
+    if (!current?.consent) return "你目前沒有已公開的專長刊登，因此沒有資料需要刪除。";
+    await withdrawMatchProfile(env, guildId, member.userId);
+    await discardMatchProfileDraft(env, guildId, member.userId);
+    return "✅ 已刪除你的專長刊登。資料已從公開媒合資料庫移除，之後不會再被介紹給其他仙友。";
+  }
+
+  const current = await getMatchProfile(env, guildId, member.userId);
+  if (!current?.consent) {
+    return "你目前沒有已公開的刊登可修改。可以先告訴本座「我擅長 A、B，方便時間：晚上」建立刊登草稿。";
+  }
+  const patch = parseMatchProfilePatch(question);
+  if (!patch.skillList && patch.availability === null && patch.note === null) {
+    return [
+      "可以修改，但這句裡還沒有新的刊登內容。",
+      "請像這樣告訴本座：",
+      "`修改我的刊登 專長：程式設計、影片剪輯，方便時間：平日晚間，備註：可先私訊`"
+    ].join("\n");
+  }
+  const updated = await updateMatchProfile(env, {
+    guildId,
+    member,
+    skillList: patch.skillList,
+    availability: patch.availability,
+    note: patch.note
+  });
+  return [
+    "✅ 已修改你的專長刊登，資料已實際更新。",
+    `專長：${updated.skills}`,
+    `方便時間：${updated.availability}`,
+    updated.note ? `備註：${updated.note}` : "備註：無"
+  ].join("\n");
+}
+
+async function processMatchListingChat(env, { guildId, member, question }) {
   const draft = parseMatchProfileDraft(question);
   const explicitConsent = /(確認刊登|確認公開|同意刊登|同意公開|幫我刊登|可以公開|公開吧)/u.test(question);
   const simpleConfirm = /^(確認|同意|可以|好|好的|ok|OK)$/u.test(question.trim());
@@ -94,11 +161,11 @@ async function processMatchListingChat(env, { guildId, member, question, intent 
   ].filter(Boolean).join("\n");
 }
 
-async function buildAutonomyContext(env, { guildId, userId, question, intent }) {
-  const resolvedIntent = intent || detectLaozuConversationIntent(question);
+async function buildAutonomyContext(env, { guildId, userId, question }) {
+  const intent = detectLaozuConversationIntent(question);
   const blocks = [];
 
-  if (resolvedIntent.asksForPeople) {
+  if (intent.asksForPeople) {
     const matches = await findMatchProfiles(env, {
       guildId,
       requesterId: userId,
@@ -108,14 +175,14 @@ async function buildAutonomyContext(env, { guildId, userId, question, intent }) 
     blocks.push(matchContext(matches));
   }
 
-  if (resolvedIntent.career) {
+  if (intent.career) {
     const currentProfile = await getMatchProfile(env, guildId, userId);
     if (!currentProfile?.consent) {
       blocks.push("玩家正在談換工作、兼職、副業、接案或類似機會，而且目前沒有公開媒合資料。請主動但不強迫地問她／他是否要讓你協助刊登可公開的多項能力、方便時間與備註；必須取得明確同意後才能公開。玩家也可以直接用自然語句告訴你『我擅長 A、B，接案時間晚上』建立草稿，再回覆『確認』完成刊登。");
     }
   }
 
-  if (resolvedIntent.capabilityRequest) {
+  if (intent.capabilityRequest) {
     const suggestion = await recordCapabilitySuggestion(env, { text: question, userId, guildId });
     if (suggestion) {
       blocks.push("這段話已由程式登記為『老祖可能欠缺的能力／平台功能建議』，會送進宗主管理面板等待評估。相似需求會自動合併，不要宣稱功能已經存在或已經開發完成。若玩家只是詢問，仍先回答能做與不能做的部分。");
@@ -176,14 +243,22 @@ export async function handleDiscordMentionEvent(request, env) {
     getPlayerState(env, userId)
   ]);
 
-  const intent = detectLaozuConversationIntent(question);
-  const directReply = await processMatchListingChat(env, { guildId, member, question, intent });
-  if (directReply) {
-    await finishChat(env, { guildId, userId, question, answer: directReply, eventId });
-    return json({ ok: true, reply: directReply });
+  const managementReply = await processOwnListingManagement(env, { guildId, member, question });
+  if (managementReply) {
+    await finishChat(env, { guildId, userId, question, answer: managementReply, eventId });
+    return json({ ok: true, reply: managementReply });
   }
 
-  const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question, intent });
+  const intent = detectLaozuConversationIntent(question);
+  if (!intent.asksForPeople) {
+    const directReply = await processMatchListingChat(env, { guildId, member, question });
+    if (directReply) {
+      await finishChat(env, { guildId, userId, question, answer: directReply, eventId });
+      return json({ ok: true, reply: directReply });
+    }
+  }
+
+  const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question });
   const answer = await askGemini(enrichedQuestion, env, history, profile, member, playerState);
   await finishChat(env, { guildId, userId, question, answer, eventId });
   return json({ ok: true, reply: answer });
