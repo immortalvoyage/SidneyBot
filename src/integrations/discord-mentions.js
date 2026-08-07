@@ -37,7 +37,10 @@ function matchContext(matches) {
   ].join("\n");
 }
 
-async function processMatchListingChat(env, { guildId, member, question }) {
+async function processMatchListingChat(env, { guildId, member, question, intent }) {
+  // 找人需求永遠優先於刊登解析，避免「誰的專長是 X」被誤判成自己要刊登 X。
+  if (intent?.asksForPeople) return null;
+
   const draft = parseMatchProfileDraft(question);
   const explicitConsent = /(確認刊登|確認公開|同意刊登|同意公開|幫我刊登|可以公開|公開吧)/u.test(question);
   const simpleConfirm = /^(確認|同意|可以|好|好的|ok|OK)$/u.test(question.trim());
@@ -91,11 +94,11 @@ async function processMatchListingChat(env, { guildId, member, question }) {
   ].filter(Boolean).join("\n");
 }
 
-async function buildAutonomyContext(env, { guildId, userId, question }) {
-  const intent = detectLaozuConversationIntent(question);
+async function buildAutonomyContext(env, { guildId, userId, question, intent }) {
+  const resolvedIntent = intent || detectLaozuConversationIntent(question);
   const blocks = [];
 
-  if (intent.asksForPeople) {
+  if (resolvedIntent.asksForPeople) {
     const matches = await findMatchProfiles(env, {
       guildId,
       requesterId: userId,
@@ -105,14 +108,14 @@ async function buildAutonomyContext(env, { guildId, userId, question }) {
     blocks.push(matchContext(matches));
   }
 
-  if (intent.career) {
+  if (resolvedIntent.career) {
     const currentProfile = await getMatchProfile(env, guildId, userId);
     if (!currentProfile?.consent) {
       blocks.push("玩家正在談換工作、兼職、副業、接案或類似機會，而且目前沒有公開媒合資料。請主動但不強迫地問她／他是否要讓你協助刊登可公開的多項能力、方便時間與備註；必須取得明確同意後才能公開。玩家也可以直接用自然語句告訴你『我擅長 A、B，接案時間晚上』建立草稿，再回覆『確認』完成刊登。");
     }
   }
 
-  if (intent.capabilityRequest) {
+  if (resolvedIntent.capabilityRequest) {
     const suggestion = await recordCapabilitySuggestion(env, { text: question, userId, guildId });
     if (suggestion) {
       blocks.push("這段話已由程式登記為『老祖可能欠缺的能力／平台功能建議』，會送進宗主管理面板等待評估。相似需求會自動合併，不要宣稱功能已經存在或已經開發完成。若玩家只是詢問，仍先回答能做與不能做的部分。");
@@ -173,13 +176,14 @@ export async function handleDiscordMentionEvent(request, env) {
     getPlayerState(env, userId)
   ]);
 
-  const directReply = await processMatchListingChat(env, { guildId, member, question });
+  const intent = detectLaozuConversationIntent(question);
+  const directReply = await processMatchListingChat(env, { guildId, member, question, intent });
   if (directReply) {
     await finishChat(env, { guildId, userId, question, answer: directReply, eventId });
     return json({ ok: true, reply: directReply });
   }
 
-  const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question });
+  const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question, intent });
   const answer = await askGemini(enrichedQuestion, env, history, profile, member, playerState);
   await finishChat(env, { guildId, userId, question, answer, eventId });
   return json({ ok: true, reply: answer });
