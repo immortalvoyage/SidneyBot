@@ -10,8 +10,18 @@ export function masterAdminPanelComponents() {
   return [
     { type: 1, components: [button("add", "新增領民", "👤", 1), button("bind", "綁定 UID", "🔗", 1), button("promote", "晉升長老", "⬆️", 1)] },
     { type: 1, components: [button("view", "查看成員", "🔎"), button("demote", "調整為領民", "⬇️"), button("remove", "移出名冊", "🚪", 4)] },
-    { type: 1, components: [button("audit", "操作紀錄", "📝"), button("refresh", "重新整理", "🔄")] }
+    { type: 1, components: [button("capabilities", "老祖能力建議", "🧠", 1), button("audit", "操作紀錄", "📝"), button("refresh", "重新整理", "🔄")] }
   ];
+}
+
+export function capabilitySuggestionComponents(items) {
+  return (items || []).slice(0, 5).map(item => ({
+    type: 1,
+    components: [
+      { type: 2, style: 3, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability:developed:${item.id}`, label: "已開發", emoji: { name: "✅" } },
+      { type: 2, style: 4, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability:rejected:${item.id}`, label: "拒絕", emoji: { name: "🚫" } }
+    ]
+  }));
 }
 
 export function adminUserSelect(action) {
