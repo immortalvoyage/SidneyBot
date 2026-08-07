@@ -55,21 +55,13 @@ function scoreProfile(profile, need) {
   return score;
 }
 
-function looksLikeSearchRequest(value) {
-  return /(不知道|想知道|有沒有|誰|哪位|找|想找|幫我找|介紹|推薦|徵|需要).{0,24}(專長|擅長|會|能|可以|人才|人|陪我|幫忙|協助)/u.test(value)
-    || /(誰的專長是|有誰的專長是|有誰擅長|誰擅長|找.*專長|想找.*專長)/u.test(value);
-}
-
 export function parseMatchProfileDraft(text) {
   const value = clean(text, 1000);
-  // 只有在玩家明確描述「自己的能力」時才建立刊登草稿。
-  // 「誰的專長是 X／我想找 X」屬於找人需求，絕不可誤寫成玩家自己的專長。
-  if (looksLikeSearchRequest(value)) return null;
+  const thirdPartySearch = /(不知道|想找|找一下|找找|有沒有|有誰|誰的|誰會|誰能|哪位|哪個).{0,30}(專長|擅長|會|可以協助)/u.test(value)
+    || /(專長|擅長).{0,30}(的人|仙友|玩家|成員)/u.test(value);
+  if (thirdPartySearch) return null;
 
-  const selfDeclaration = /(?:^|[，,。；;\s])(我|本人|自己|小弟|小妹)?\s*(?:擅長|專長(?:是|有)?|能力(?:是|有)?|可以協助|可協助|會做|會)[：:\s]*/u;
-  if (!selfDeclaration.test(value)) return null;
-
-  const skillMatch = value.match(/(?:擅長|專長(?:是|有)?|能力(?:是|有)?|可以協助|可協助|會做|會)[：:\s]*([^。；;\n]{2,220})/u);
+  const skillMatch = value.match(/(?:我(?:很)?擅長|我的專長(?:是|有)?|我的能力(?:是|有)?|我可以協助|我可協助|我會做|我會|專長(?:是|有)?|能力(?:是|有)?)[：:\s]*([^。；;\n]{2,220})/u);
   if (!skillMatch) return null;
 
   let skillsText = skillMatch[1]
@@ -85,6 +77,19 @@ export function parseMatchProfileDraft(text) {
     skills: skillList.join("、"),
     availability: clean(availabilityMatch?.[1] || "請私下協調", 120),
     note: clean(noteMatch?.[1] || "", 300)
+  };
+}
+
+export function parseMatchProfilePatch(text) {
+  const value = clean(text, 1000);
+  const skillMatch = value.match(/(?:專長|能力)[：:\s]*(.+?)(?=(?:，|,)?\s*(?:接案時間|方便時間|可協助時間|有空時間|備註|說明)[：:]|$)/u);
+  const availabilityMatch = value.match(/(?:接案時間|方便時間|可協助時間|有空時間)[：:\s]*([^。；;\n]{1,120})/u);
+  const noteMatch = value.match(/(?:備註|說明)[：:\s]*([^。；;\n]{0,220})/u);
+  const skillList = skillMatch ? normalizeSkills(skillMatch[1]) : null;
+  return {
+    skillList: skillList?.length ? skillList : null,
+    availability: availabilityMatch ? clean(availabilityMatch[1], 120) : null,
+    note: noteMatch ? clean(noteMatch[1], 300) : null
   };
 }
 
@@ -140,6 +145,25 @@ export async function publishMatchProfile(env, { guildId, member, skills, skillL
   await env.BOT_MEMORY.put(profileKey(guildId, member.userId), JSON.stringify(profile));
   await discardMatchProfileDraft(env, guildId, member.userId);
   return profile;
+}
+
+export async function updateMatchProfile(env, { guildId, member, skillList, availability, note }) {
+  if (!env.BOT_MEMORY) throw new Error("媒合資料庫尚未設定");
+  if (!member?.userId || member.active === false) throw new Error("只有仙遊者正式成員可以修改媒合資料");
+  const current = await getMatchProfile(env, guildId, member.userId);
+  if (!current?.consent) throw new Error("你目前沒有已公開的專長刊登");
+
+  const nextSkills = skillList?.length
+    ? normalizeSkills(skillList)
+    : normalizeSkills(current.skillList?.length ? current.skillList : current.skills);
+  return publishMatchProfile(env, {
+    guildId,
+    member,
+    skillList: nextSkills,
+    availability: availability === null || availability === undefined ? current.availability : availability,
+    note: note === null || note === undefined ? current.note : note,
+    consent: "AGREE"
+  });
 }
 
 export async function confirmMatchProfileDraft(env, { guildId, member }) {
