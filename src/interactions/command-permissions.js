@@ -1,4 +1,4 @@
-import { listCommandPolicies, setCommandRoles, rankLabel } from "../commands/command-access.js";
+import { listCommandPolicies, resetCommandRoles, setCommandRoles, rankLabel } from "../commands/command-access.js";
 
 export function commandPolicyListComponents(policies) {
   const options = policies.slice(0, 25).map(command => ({
@@ -19,7 +19,10 @@ export function commandRoleComponents(policy) {
       max_values: policy.allowedRoles.length,
       options: policy.allowedRoles.map(rank => ({ label: rankLabel(rank), value: rank, default: policy.roles.includes(rank) }))
     }] },
-    { type: 1, components: [{ type: 2, style: 2, custom_id: "sidney:admin:v1:command-permissions", label: "返回指令總表", emoji: { name: "↩️" } }] }
+    { type: 1, components: [
+      { type: 2, style: 4, custom_id: `sidney:admin:v1:command-reset:${policy.name}`, label: "恢復預設權限", emoji: { name: "♻️" } },
+      { type: 2, style: 2, custom_id: "sidney:admin:v1:command-permissions", label: "返回指令總表", emoji: { name: "↩️" } }
+    ] }
   ];
 }
 
@@ -53,6 +56,11 @@ export async function selectCommandPolicy(env, commandName) {
   const policy = (await listCommandPolicies(env)).find(command => command.name === commandName);
   if (!policy) throw new Error("找不到指定指令");
   return { content: commandPolicyText(policy), components: commandRoleComponents(policy) };
+}
+
+export async function resetCommandPolicy(env, commandName) {
+  const policy = await resetCommandRoles(env, commandName);
+  return { content: `✅ 已恢復預設權限。\n\n${commandPolicyText(policy)}`, components: commandRoleComponents(policy) };
 }
 
 export async function updateCommandPolicy(env, commandName, roles) {
