@@ -37,6 +37,13 @@ const ENGLISH_TO_CHINESE = Object.freeze({
   recent: "最近",
   record: "紀錄",
   reprimand: "訓誡",
+  offer: "刊登協助",
+  match: "媒合",
+  withdraw: "撤回媒合",
+  skills: "專長",
+  availability: "方便時間",
+  consent: "公開同意",
+  need: "需求",
   affection: "好感扣除",
   check: "檢查",
   repair: "修復"

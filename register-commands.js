@@ -238,8 +238,38 @@ export const ENGLISH_COMMANDS = [
   },
   {
     name: "laozu",
-    description: "老祖宗門互動與處置（宗主）",
+    description: "老祖互動、成員媒合與宗門處置",
     options: [
+      {
+        name: "offer",
+        description: "自願公開可協助的專長，供老祖媒合",
+        type: 1,
+        options: [
+          { name: "skills", description: "可協助的專長；以頓號分隔", type: 3, required: true, min_length: 2, max_length: 300 },
+          { name: "availability", description: "方便聯絡或協助的時間", type: 3, required: true, min_length: 2, max_length: 120 },
+          {
+            name: "consent",
+            description: "確認同意向仙遊者成員公開以上媒合資料",
+            type: 3,
+            required: true,
+            choices: [{ name: "同意公開媒合", value: "AGREE" }]
+          },
+          { name: "note", description: "其他媒合備註（請勿填寫敏感資料）", type: 3, required: false, max_length: 300 }
+        ]
+      },
+      {
+        name: "match",
+        description: "從已同意公開的成員資料尋找協助",
+        type: 1,
+        options: [
+          { name: "need", description: "需要哪方面的協助", type: 3, required: true, min_length: 2, max_length: 300 }
+        ]
+      },
+      {
+        name: "withdraw",
+        description: "撤回自己的公開媒合資料",
+        type: 1
+      },
       {
         name: "reprimand",
         description: "公開訓誡一名正式成員並降低好感（宗主）",

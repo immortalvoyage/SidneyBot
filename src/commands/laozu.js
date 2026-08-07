@@ -5,6 +5,12 @@ import { logError } from "../../logger.js";
 import { resolveActor } from "../sect/service.js";
 import { getPlayerState } from "../platform/player-state-storage.js";
 import { reprimandPlayer } from "../platform/reprimand.js";
+import { ensureMaster, getMember, listMembers } from "../sect/members.js";
+import {
+  findMatchProfiles,
+  publishMatchProfile,
+  withdrawMatchProfile
+} from "../platform/laozu-matchmaking.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -60,7 +66,65 @@ async function execute(interaction, env) {
 }
 
 export async function handleLaozu(interaction, env, ctx) {
-  if (subcommand(interaction)?.name !== "reprimand") {
+  const action = subcommand(interaction)?.name;
+  if (["offer", "match", "withdraw"].includes(action)) {
+    try {
+      const user = getUser(interaction);
+      await ensureMaster(env, user);
+      const member = await getMember(env, user.id);
+      if (!member || member.active === false) {
+        throw new Error("只有仙遊者正式成員可以使用老祖媒合");
+      }
+      const guildId = interaction.guild_id || "dm";
+
+      if (action === "offer") {
+        const profile = await publishMatchProfile(env, {
+          guildId,
+          member,
+          skills: subOption(interaction, "skills"),
+          availability: subOption(interaction, "availability"),
+          note: subOption(interaction, "note"),
+          consent: subOption(interaction, "consent")
+        });
+        return immediateResponse([
+          "✅ 老祖已刊登你的自願協助資料。",
+          `專長：${profile.skills}`,
+          `方便時間：${profile.availability}`,
+          "只有其他成員主動搜尋相符需求時才會顯示；可隨時使用 `/laozu withdraw` 撤回。"
+        ].join("\n"), true);
+      }
+
+      if (action === "withdraw") {
+        await withdrawMatchProfile(env, guildId, user.id);
+        return immediateResponse("✅ 已撤回媒合資料，老祖不會再向其他成員顯示。", true);
+      }
+
+      const matches = await findMatchProfiles(env, {
+        guildId,
+        requesterId: user.id,
+        need: subOption(interaction, "need"),
+        members: await listMembers(env)
+      });
+      if (!matches.length) {
+        return immediateResponse("目前沒有已同意公開且符合需求的仙友。本座不會拿未授權的私人資料硬湊人選。", true);
+      }
+      return immediateResponse([
+        "## 老祖媒合結果",
+        ...matches.map((item, index) => [
+          `${index + 1}. **${item.displayName}**（<@${item.userId}>）`,
+          `   專長：${item.skills}`,
+          `   方便時間：${item.availability}`,
+          item.note ? `   備註：${item.note}` : null
+        ].filter(Boolean).join("\n")),
+        "",
+        "以上成員皆已主動同意公開媒合；請尊重對方時間，先禮貌詢問。"
+      ].join("\n"), true);
+    } catch (error) {
+      return immediateResponse(`❌ ${formatError(error)}`, true);
+    }
+  }
+
+  if (action !== "reprimand") {
     return immediateResponse("❌ 不支援的 /laozu 子指令。", true);
   }
 
