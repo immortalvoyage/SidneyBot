@@ -51,6 +51,15 @@ export async function canUseCommand(env, commandName, rank) {
   return !policy || policy.roles.includes(normalizedRank(rank));
 }
 
+export async function resetCommandRoles(env, commandName) {
+  const command = COMMAND_CATALOG.find(item => item.name === commandName);
+  if (!command) throw new Error("找不到指定指令");
+  const saved = await overrides(env);
+  delete saved[commandName];
+  await env.BOT_MEMORY.put(ACCESS_KEY, JSON.stringify(saved));
+  return { ...command, allowedRoles: [...command.roles], roles: [...command.roles] };
+}
+
 export async function setCommandRoles(env, commandName, roles) {
   const command = COMMAND_CATALOG.find(item => item.name === commandName);
   if (!command) throw new Error("找不到指定指令");
