@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { handleCommand } from "../commands.js";
 import { handleHelpInteraction } from "../src/interactions/help-panel.js";
-import { canUseCommand, listCommandPolicies, setCommandRoles } from "../src/commands/command-access.js";
+import { canUseCommand, listCommandPolicies, resetCommandRoles, setCommandRoles } from "../src/commands/command-access.js";
 import { RANK } from "../src/sect/constants.js";
 import { upsertMember } from "../src/sect/members.js";
 
@@ -61,6 +61,15 @@ test("宗主修改身分後會同步影響實際可執行權限", async () => {
   await setCommandRoles(env, "ai", [RANK.DISCIPLE, RANK.ELDER, RANK.MASTER]);
   assert.equal(await canUseCommand(env, "ai", RANK.RESIDENT), false);
   assert.equal(await canUseCommand(env, "ai", RANK.DISCIPLE), true);
+});
+
+test("宗主可將單一指令一鍵恢復預設權限", async () => {
+  const env = createEnv();
+  await setCommandRoles(env, "ai", [RANK.MASTER]);
+  assert.equal(await canUseCommand(env, "ai", RANK.RESIDENT), false);
+  const restored = await resetCommandRoles(env, "ai");
+  assert.deepEqual(restored.roles, restored.allowedRoles);
+  assert.equal(await canUseCommand(env, "ai", RANK.RESIDENT), true);
 });
 
 test("玩家看不到沒有權限的管理指令", async () => {
