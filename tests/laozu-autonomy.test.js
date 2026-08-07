@@ -29,6 +29,8 @@ test("辨識換工作、找人與平台能力需求", () => {
   assert.equal(detectLaozuConversationIntent("最近想換個工作，也許接點兼職").career, true);
   assert.equal(detectLaozuConversationIntent("我想找程式設計師幫忙做網站").asksForPeople, true);
   assert.equal(detectLaozuConversationIntent("不知道有誰的專長是打混摸魚的，想找來陪我").asksForPeople, true);
+  assert.equal(detectLaozuConversationIntent("我想學arduino該找誰").asksForPeople, true);
+  assert.equal(detectLaozuConversationIntent("想學 Arduino 可以請教哪位仙友？").asksForPeople, true);
   assert.equal(detectLaozuConversationIntent("老祖妳能不能幫我記錄活動報名？").capabilityRequest, true);
 });
 
