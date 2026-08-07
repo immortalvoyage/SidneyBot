@@ -68,6 +68,12 @@ test("自然聊天可建立草稿並在確認後實際刊登", async () => {
   assert.equal((await getMatchProfile(storage, "guild", "2")).consent, true);
 });
 
+test("找人語句不可誤判成自己的專長刊登草稿", () => {
+  assert.equal(parseMatchProfileDraft("最近好無聊，不知道有誰的專長是打混摸魚的，想找來陪我"), null);
+  assert.equal(parseMatchProfileDraft("有誰擅長程式設計？我想找人幫忙"), null);
+  assert.equal(parseMatchProfileDraft("我想找專長是剪輯的人"), null);
+});
+
 test("只媒合已同意公開且符合需求的其他成員", async () => {
   const storage = env();
   await publishMatchProfile(storage, {
