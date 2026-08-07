@@ -37,6 +37,19 @@ export function deferredResponse(ephemeral = false) {
   });
 }
 
+export async function deleteOriginalResponse(applicationId, token) {
+  const normalizedApplicationId = String(applicationId || "").trim();
+  const normalizedToken = String(token || "").trim();
+  if (!normalizedApplicationId || !normalizedToken) {
+    throw new Error("缺少 Discord Application ID 或互動 Token");
+  }
+
+  await discordFetch(
+    `${DISCORD_API}/webhooks/${normalizedApplicationId}/${normalizedToken}/messages/@original`,
+    { method: "DELETE" }
+  );
+}
+
 export function autocompleteResponse(choices = []) {
   return json({
     type: 8,
