@@ -206,6 +206,7 @@ export async function processMatchListingChat(env, { guildId, member, question }
   const draft = parseMatchProfileDraft(question);
   const explicitConsent = /(確認刊登|確認公開|同意刊登|同意公開|幫我刊登|可以公開|公開吧)/u.test(question);
   const simpleConfirm = /^(確認|確認更新|同意|可以|好|好的|ok|OK)$/u.test(question.trim());
+  const explicitDraftConfirm = /^(確認更新|確認刊登|確認公開)$/u.test(question.trim());
   const cancel = /^(取消|不要刊登|取消刊登|不要公開|取消更新)$/u.test(question.trim());
 
   if (cancel && await getMatchProfileDraft(env, guildId, member.userId)) {
@@ -216,6 +217,7 @@ export async function processMatchListingChat(env, { guildId, member, question }
   if ((simpleConfirm || explicitConsent) && !draft) {
     const before = await getMatchProfile(env, guildId, member.userId);
     const pending = await getMatchProfileDraft(env, guildId, member.userId);
+    if (!pending && !explicitDraftConfirm && !explicitConsent) return null;
     const profile = await confirmMatchProfileDraft(env, { guildId, member });
     if (profile) {
       const replaced = Boolean(before?.consent && pending);

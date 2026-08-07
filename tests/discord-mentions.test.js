@@ -66,3 +66,12 @@ test("沒有真實草稿時確認更新不得交給 AI 假稱完成", async () =
   assert.match(reply, /沒有等待確認/);
   assert.match(reply, /沒有更新任何資料/);
 });
+
+test("沒有刊登草稿時一般 OK 不得誤入專長確認流程", async () => {
+  const reply = await processMatchListingChat({ BOT_MEMORY: { async get() { return null; } } }, {
+    guildId: "guild",
+    member: { userId: "111", active: true },
+    question: "OK"
+  });
+  assert.equal(reply, null);
+});
