@@ -108,6 +108,20 @@ test("聊天說誰的專長是打混摸魚也能找到已刊登玩家", async ()
   assert.equal(matches[0].userId, "2");
 });
 
+test("自然語句提到 Arduino 時可命中 Arduino 實作教學專長", async () => {
+  const storage = env();
+  await publishMatchProfile(storage, {
+    guildId: "guild", member: members[1], skills: "程式設計、燈燈工廠規劃、物聯網開發、Arduino實作教學",
+    availability: "請私下協調", consent: "AGREE"
+  });
+  const matches = await findMatchProfiles(storage, {
+    guildId: "guild", requesterId: "1", need: "我想學arduino該找誰", members
+  });
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].userId, "2");
+  assert.match(matches[0].skills, /Arduino實作教學/);
+});
+
 test("符合需求時依老祖好感度優先並最多回傳三人", async () => {
   const storage = env();
   for (const member of members.slice(1)) {
