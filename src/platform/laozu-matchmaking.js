@@ -55,8 +55,20 @@ function scoreProfile(profile, need) {
   return score;
 }
 
+function looksLikeSearchRequest(value) {
+  return /(不知道|想知道|有沒有|誰|哪位|找|想找|幫我找|介紹|推薦|徵|需要).{0,24}(專長|擅長|會|能|可以|人才|人|陪我|幫忙|協助)/u.test(value)
+    || /(誰的專長是|有誰的專長是|有誰擅長|誰擅長|找.*專長|想找.*專長)/u.test(value);
+}
+
 export function parseMatchProfileDraft(text) {
   const value = clean(text, 1000);
+  // 只有在玩家明確描述「自己的能力」時才建立刊登草稿。
+  // 「誰的專長是 X／我想找 X」屬於找人需求，絕不可誤寫成玩家自己的專長。
+  if (looksLikeSearchRequest(value)) return null;
+
+  const selfDeclaration = /(?:^|[，,。；;\s])(我|本人|自己|小弟|小妹)?\s*(?:擅長|專長(?:是|有)?|能力(?:是|有)?|可以協助|可協助|會做|會)[：:\s]*/u;
+  if (!selfDeclaration.test(value)) return null;
+
   const skillMatch = value.match(/(?:擅長|專長(?:是|有)?|能力(?:是|有)?|可以協助|可協助|會做|會)[：:\s]*([^。；;\n]{2,220})/u);
   if (!skillMatch) return null;
 
