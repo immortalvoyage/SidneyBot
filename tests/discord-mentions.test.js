@@ -5,7 +5,8 @@ import {
   extractMentionQuestion,
   formatSectRosterContext,
   handleDiscordMentionEvent,
-  needsSectRosterContext
+  needsSectRosterContext,
+  processMatchListingChat
 } from "../src/integrations/discord-mentions.js";
 
 test("extracts normal and nickname Discord mentions", () => {
@@ -54,4 +55,14 @@ test("mention endpoint rejects unsigned events", async () => {
   const request = new Request("https://sidney.test/integrations/discord-mentions", { method: "POST", body: "{}" });
   const response = await handleDiscordMentionEvent(request, { DISCORD_GATEWAY_SECRET: "x".repeat(32) });
   assert.equal(response.status, 401);
+});
+
+test("沒有真實草稿時確認更新不得交給 AI 假稱完成", async () => {
+  const reply = await processMatchListingChat({ BOT_MEMORY: { async get() { return null; } } }, {
+    guildId: "guild",
+    member: { userId: "111", active: true },
+    question: "確認更新"
+  });
+  assert.match(reply, /沒有等待確認/);
+  assert.match(reply, /沒有更新任何資料/);
 });

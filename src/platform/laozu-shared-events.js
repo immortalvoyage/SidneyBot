@@ -210,9 +210,20 @@ export async function recordSharedLaozuEvent(env, input) {
     await env.BOT_MEMORY.put(key, JSON.stringify(next), { expirationTtl: EVENT_TTL_SECONDS });
   }));
   try {
-    await archiveSharedLaozuEvent(env, event);
+    const result = await archiveSharedLaozuEvent(env, event);
+    await env.BOT_MEMORY.put("integration:laozu-archive:last", JSON.stringify({
+      ok: result.archived === true,
+      eventId: event.id,
+      attemptedAt: new Date().toISOString()
+    }), { expirationTtl: EVENT_TTL_SECONDS });
   } catch (error) {
     console.error("老祖事件寫入 Google Sheets 失敗", error);
+    await env.BOT_MEMORY.put("integration:laozu-archive:last", JSON.stringify({
+      ok: false,
+      eventId: event.id,
+      error: String(error?.message || error).slice(0, 240),
+      attemptedAt: new Date().toISOString()
+    }), { expirationTtl: EVENT_TTL_SECONDS });
   }
   return event;
 }

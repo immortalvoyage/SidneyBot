@@ -229,6 +229,7 @@ export async function processMatchListingChat(env, { guildId, member, question }
         "之後其他仙友詢問相符需求時，老祖可以依好感度優先介紹；可隨時查看、修改或刪除自己的刊登。"
       ].filter(Boolean).join("\n");
     }
+    return "目前沒有等待確認的專長刊登草稿，所以本座沒有更新任何資料。請先告訴本座新的專長內容，再進行確認。";
   }
 
   if (!draft) return null;

@@ -79,7 +79,8 @@ export function parseMatchProfileDraft(text) {
     || /(專長|擅長).{0,30}(的人|仙友|玩家|成員)/u.test(value);
   if (thirdPartySearch) return null;
 
-  const skillMatch = value.match(/(?:我(?:很)?擅長|我的專長(?:是|有)?|我的能力(?:是|有)?|我可以協助|我可協助|我會做|我會|專長(?:是|有)?|能力(?:是|有)?)[：:\s]*([^。；;\n]{2,220})/u);
+  const skillMatch = value.match(/(?:我(?:很)?擅長|我的專長(?:是|有)?|我的能力(?:是|有)?|我可以協助|我可協助|我會做|我會|專長(?:是|有)?|能力(?:是|有)?)[：:\s]*([^。；;\n]{2,220})/u)
+    || value.match(/我(?:最近)?想找[：:\s]*([^。；;\n]{2,120}?)(?:相關的?)?(?:兼職|副業|接案|工作)(?:機會)?/u);
   if (!skillMatch) return null;
 
   let skillsText = skillMatch[1]

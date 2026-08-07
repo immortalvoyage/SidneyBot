@@ -16,13 +16,14 @@ test("health payload reports deployed capabilities without exposing secrets", ()
     laozuSpeakerIdentityGrounding: true,
     laozuMoodState: true,
     laozuMentions: true,
+    laozuEventArchive: false,
     redeemAnnouncements: false
   });
   assert.equal(JSON.stringify(payload).includes("gateway-secret"), false);
 });
 
 test("health response is public and never cached", async () => {
-  const response = handleHealthRequest({ APP_VERSION: "4.3.22" });
+  const response = await handleHealthRequest({ APP_VERSION: "4.3.22" });
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("Cache-Control"), "no-store");
   assert.equal((await response.json()).service, "sidney-discord-worker");

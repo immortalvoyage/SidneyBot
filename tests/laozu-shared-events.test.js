@@ -145,6 +145,28 @@ test("archives shared events through a signed Google Sheets webhook", async () =
   assert.match(sent.body.signature, /^[a-f0-9]{64}$/);
 });
 
+test("records the latest archive failure for production diagnosis", async () => {
+  const values = new Map();
+  const env = {
+    BOT_MEMORY: {
+      async get(key, options) { const value = values.get(key); return options?.type === "json" && value ? JSON.parse(value) : value || null; },
+      async put(key, value) { values.set(key, value); }
+    },
+    LAOZU_EVENT_ARCHIVE_URL: "https://script.google.com/macros/s/example/exec",
+    LAOZU_EVENT_ARCHIVE_SECRET: "test-secret"
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: false, status: 500, async json() { return {}; } });
+  try {
+    await recordSharedLaozuEvent(env, { guildId: "999999", actorId: "111111", eventId: "failed-archive", text: "測試失敗狀態" });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  const status = JSON.parse(values.get("integration:laozu-archive:last"));
+  assert.equal(status.ok, false);
+  assert.match(status.error, /HTTP 500/);
+});
+
 test("queries long-term archive with signed bounded identity scope", async () => {
   let sent;
   const events = [{ id: "old-1", actorId: "111111", text: "歷史事件" }];

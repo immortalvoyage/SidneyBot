@@ -93,3 +93,8 @@ test("同一玩家重複刊登仍只覆蓋固定的單一 profile key", async ()
   assert.equal(stored.skills, "Discord Bot、自動化");
   assert.equal(stored.availability, "週末");
 });
+
+test("想找特定領域兼職可建立真實更新草稿", () => {
+  const draft = parseMatchProfileDraft("我最近想找程式設計相關的兼職，可以幫我留意嗎？");
+  assert.deepEqual(draft.skillList, ["程式設計"]);
+});
