@@ -1,6 +1,7 @@
 const EVENT_TTL_SECONDS = 30 * 24 * 60 * 60;
 const MAX_EVENTS_PER_USER = 20;
 const MAX_CONTEXT_EVENTS = 5;
+const ARCHIVE_TIMEOUT_MS = 8000;
 
 function cleanSnowflake(value) {
   const id = String(value || "").trim();
@@ -50,6 +51,32 @@ async function readJson(kv, key, fallback) {
   return await kv.get(key, { type: "json" }) || fallback;
 }
 
+async function hmacHex(secret, message) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(message)));
+  return [...bytes].map(value => value.toString(16).padStart(2, "0")).join("");
+}
+
+export async function archiveSharedLaozuEvent(env, event, fetchImpl = fetch) {
+  const url = String(env?.LAOZU_EVENT_ARCHIVE_URL || "").trim();
+  const secret = String(env?.LAOZU_EVENT_ARCHIVE_SECRET || "").trim();
+  if (!url || !secret || !event) return { skipped: true };
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const eventJson = JSON.stringify(event);
+  const signature = await hmacHex(secret, `${timestamp}.${event.id}.${eventJson}`);
+  const response = await fetchImpl(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ timestamp, eventId: event.id, event, signature }),
+    signal: AbortSignal.timeout(ARCHIVE_TIMEOUT_MS)
+  });
+  if (!response.ok) throw new Error(`老祖事件歸檔 HTTP ${response.status}`);
+  const result = await response.json();
+  if (!result?.ok) throw new Error(`老祖事件歸檔遭拒：${String(result?.error || "unknown_error")}`);
+  return { archived: true };
+}
+
 export async function recordSharedLaozuEvent(env, input) {
   const event = normalizeEvent(input);
   if (!env?.BOT_MEMORY || !event) return null;
@@ -61,6 +88,11 @@ export async function recordSharedLaozuEvent(env, input) {
     const next = [event.id, ...current.filter(id => id !== event.id)].slice(0, MAX_EVENTS_PER_USER);
     await env.BOT_MEMORY.put(key, JSON.stringify(next), { expirationTtl: EVENT_TTL_SECONDS });
   }));
+  try {
+    await archiveSharedLaozuEvent(env, event);
+  } catch (error) {
+    console.error("老祖事件寫入 Google Sheets 失敗", error);
+  }
   return event;
 }
 

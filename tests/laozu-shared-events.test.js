@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  archiveSharedLaozuEvent,
   extractMentionedUserIds,
   formatSharedEventContext,
   loadSharedLaozuEvents,
@@ -54,4 +55,17 @@ test("does not store events without another mentioned player", async () => {
     text: "老祖今天好嗎"
   });
   assert.equal(result, null);
+});
+
+test("archives shared events through a signed Google Sheets webhook", async () => {
+  let sent;
+  const event = { id: "message-archive-1", guildId: "999999", channelId: "888888", actorId: "111111", participantIds: ["222222"], text: "測試事件", source: "public_discord_mention", verification: "player_statement", createdAt: "2026-08-07T00:00:00.000Z" };
+  const result = await archiveSharedLaozuEvent({ LAOZU_EVENT_ARCHIVE_URL: "https://script.google.com/macros/s/example/exec", LAOZU_EVENT_ARCHIVE_SECRET: "test-secret" }, event, async (url, options) => {
+    sent = { url, body: JSON.parse(options.body) };
+    return { ok: true, status: 200, async json() { return { ok: true }; } };
+  });
+  assert.equal(result.archived, true);
+  assert.equal(sent.url, "https://script.google.com/macros/s/example/exec");
+  assert.equal(sent.body.eventId, event.id);
+  assert.match(sent.body.signature, /^[a-f0-9]{64}$/);
 });
