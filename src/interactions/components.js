@@ -10,7 +10,7 @@ export function masterAdminPanelComponents() {
   return [
     { type: 1, components: [button("add", "新增領民", "👤", 1), button("bind", "綁定 UID", "🔗", 1), button("promote", "晉升長老", "⬆️", 1)] },
     { type: 1, components: [button("view", "查看成員", "🔎"), button("demote", "調整為領民", "⬇️"), button("remove", "移出名冊", "🚪", 4)] },
-    { type: 1, components: [button("capabilities", "老祖能力建議", "🧠", 1), button("audit", "操作紀錄", "📝"), button("refresh", "重新整理", "🔄")] }
+    { type: 1, components: [button("match-profiles", "專長刊登管理", "📋", 1), button("capabilities", "老祖能力建議", "🧠", 1), button("audit", "操作紀錄", "📝"), button("refresh", "重新整理", "🔄")] }
   ];
 }
 
@@ -22,6 +22,37 @@ export function capabilitySuggestionComponents(items) {
       { type: 2, style: 4, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability:rejected:${item.id}`, label: "拒絕", emoji: { name: "🚫" } }
     ]
   }));
+}
+
+export function matchProfileAdminComponents(profiles) {
+  const rows = profiles || [];
+  const options = rows.slice(0, 25).map(profile => ({
+    label: String(profile.displayName || profile.userId).slice(0, 100),
+    description: String(profile.skills || "未填專長").slice(0, 100),
+    value: String(profile.userId)
+  }));
+  return [{
+    type: 1,
+    components: [{
+      type: 3,
+      custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:match-profile-select`,
+      placeholder: options.length ? "選擇一筆刊登資料進行管理" : "目前沒有公開刊登資料",
+      min_values: 1,
+      max_values: 1,
+      options: options.length ? options : [{ label: "目前沒有刊登資料", value: "none", description: "等待成員完成公開刊登" }],
+      disabled: !options.length
+    }]
+  }];
+}
+
+export function matchProfileManageComponents(userId) {
+  return [{
+    type: 1,
+    components: [
+      { type: 2, style: 4, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:match-profile-remove:${userId}`, label: "撤下這筆刊登", emoji: { name: "🗑️" } },
+      { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:match-profiles`, label: "返回列表", emoji: { name: "↩️" } }
+    ]
+  }];
 }
 
 export function adminUserSelect(action) {
