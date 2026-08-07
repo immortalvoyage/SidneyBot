@@ -61,6 +61,40 @@ export function formatSectRosterContext(members = []) {
   ].filter(Boolean).join("\n");
 }
 
+export function directRosterReply(question, members = [], mentionedUserIds = []) {
+  const text = String(question || "").trim();
+  const active = members.filter(item => item && item.active !== false);
+  const asksForRoster = /(仙遊者|宗門|名冊|成員|玩家).{0,16}(有哪些|有誰|哪些人|名單|列出)|(?:有哪些|有誰|哪些人|名單|列出).{0,16}(仙遊者|宗門|名冊|成員|玩家)/u.test(text);
+
+  if (asksForRoster) {
+    const groups = ["master", "elder", "disciple", "resident"]
+      .map(rank => {
+        const names = active
+          .filter(item => item.rank === rank)
+          .map(item => String(item.displayName || item.username || "未記名仙友").trim());
+        return names.length ? `**${RANK_NAMES[rank]}（${names.length}）**\n${names.join("、")}` : "";
+      })
+      .filter(Boolean);
+    return [
+      `仙遊者目前共有 **${active.length} 位**正式成員：`,
+      "",
+      ...groups.flatMap((group, index) => index ? ["", group] : [group]),
+      "",
+      "若要查某一位，直接 @對方問本座即可。"
+    ].join("\n");
+  }
+
+  if (mentionedUserIds.length === 1 && /(是誰|哪位|認識|知道|身分|身份)/u.test(text)) {
+    const userId = String(mentionedUserIds[0]);
+    const target = active.find(item => String(item.userId) === userId);
+    if (!target) return "本座已查過目前的正式名冊，查無這位玩家；其身分現在無法確認。";
+    const name = String(target.displayName || target.username || "未記名仙友").trim();
+    return `這位是 **${name}**，目前身分為 **${RANK_NAMES[target.rank] || "正式成員"}**。`;
+  }
+
+  return null;
+}
+
 export function extractMentionQuestion(content, botUserId) {
   const id = String(botUserId || "").trim();
   if (!/^\d+$/.test(id)) return "";
@@ -347,9 +381,9 @@ export async function handleDiscordMentionEvent(request, env) {
   ]);
 
   const mentionedUserIds = extractMentionedUserIds(payload.content, botUserId).filter(id => id !== userId);
-  const sectContext = needsSectRosterContext(question, mentionedUserIds)
-    ? formatSectRosterContext(await listMembers(env))
-    : "";
+  const needsRoster = needsSectRosterContext(question, mentionedUserIds);
+  const rosterMembers = needsRoster ? await listMembers(env) : [];
+  const sectContext = needsRoster ? formatSectRosterContext(rosterMembers) : "";
   let sharedEvents = await loadSharedLaozuEvents(env, {
     guildId,
     userIds: [userId, ...mentionedUserIds],
@@ -377,6 +411,12 @@ export async function handleDiscordMentionEvent(request, env) {
     text: question,
     scope: guildId === "dm" ? "private" : "public"
   });
+
+  const rosterReply = directRosterReply(question, rosterMembers, mentionedUserIds);
+  if (rosterReply) {
+    await finishChat(env, { guildId, userId, question, answer: rosterReply, eventId });
+    return json({ ok: true, reply: rosterReply });
+  }
 
   const managementReply = await processOwnListingManagement(env, { guildId, member, question });
   if (managementReply) {

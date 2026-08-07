@@ -94,6 +94,9 @@ test("名冊上下文禁止依 mention 猜測或編故事圓場", async () => {
   assert.match(prompt, /Discord mention/);
   assert.match(prompt, /數字 ID 與名冊逐字比對/);
   assert.match(prompt, /不得編造對方離宗、遊歷、閉關、乾脆、改名或被遺忘/);
+  assert.match(prompt, /Discord 一般聊天優先控制在 3 個短段落內/);
+  assert.match(prompt, /不輸出 Discord 數字 ID/);
+  assert.match(prompt, /動作或神態描寫最多一句/);
 });
 
 test("沒有萬象錄資料時禁止老祖猜測關係狀態", async () => {
