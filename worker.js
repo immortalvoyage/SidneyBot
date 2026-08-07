@@ -6,12 +6,12 @@ import { handleApplicationAutocomplete } from "./src/commands/application-autoco
 import { handleGameBindingAutocomplete } from "./src/commands/game-binding-autocomplete.js";
 import { handleAuditAutocomplete } from "./src/commands/audit-autocomplete.js";
 import { handleRedeemCodeEvent } from "./src/integrations/redeem-codes.js";
-import { normalizeChineseInteraction } from "./src/commands/localization.js";
 import { handleButton } from "./src/interactions/buttons.js";
 import { handleAdminInteraction, isAdminInteraction } from "./src/interactions/admin-panel.js";
 import { handleLaozuStateRequest } from "./src/integrations/laozu-state.js";
 import { handleDiscordMentionEvent } from "./src/integrations/discord-mentions.js";
 import { handleHealthRequest } from "./src/integrations/health.js";
+import { handleHelpInteraction, isHelpInteraction } from "./src/interactions/help-panel.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -79,9 +79,10 @@ export default {
       return json({ type: 1 });
     }
 
-    interaction = normalizeChineseInteraction(interaction);
 
     if (interaction.type === MESSAGE_COMPONENT) {
+      const customId = String(interaction.data?.custom_id || "");
+      if (isHelpInteraction(customId)) return handleHelpInteraction(interaction, env);
       return handleButton(interaction, env, ctx);
     }
     if (interaction.type === MODAL_SUBMIT) {
