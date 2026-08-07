@@ -36,6 +36,7 @@ export async function listCommandPolicies(env) {
   const saved = await overrides(env);
   return COMMAND_CATALOG.map(command => ({
     ...command,
+    allowedRoles: [...command.roles],
     roles: Array.isArray(saved[command.name]) ? saved[command.name].filter(role => EDITABLE_RANKS.includes(role)) : [...command.roles]
   }));
 }
@@ -53,12 +54,12 @@ export async function canUseCommand(env, commandName, rank) {
 export async function setCommandRoles(env, commandName, roles) {
   const command = COMMAND_CATALOG.find(item => item.name === commandName);
   if (!command) throw new Error("找不到指定指令");
-  const normalized = [...new Set((roles || []).filter(role => EDITABLE_RANKS.includes(role)))];
+  const normalized = [...new Set((roles || []).filter(role => command.roles.includes(role)))];
   if (!normalized.length) throw new Error("至少保留一個可使用身分");
   const saved = await overrides(env);
   saved[commandName] = normalized;
   await env.BOT_MEMORY.put(ACCESS_KEY, JSON.stringify(saved));
-  return { ...command, roles: normalized };
+  return { ...command, allowedRoles: [...command.roles], roles: normalized };
 }
 
 export function rankLabel(rank) {
