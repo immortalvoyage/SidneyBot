@@ -62,7 +62,10 @@ export function detectLaozuConversationIntent(input) {
     || /(找誰|該找誰|要找誰|問誰|該問誰|請教誰|找哪位|問哪位|請教哪位)/u.test(text);
   const capabilityRequest = /(老祖|妳|你).{0,10}(能不能|可不可以|可以幫|希望|應該要|最好能|怎麼不能|為什麼不能|如果能).{1,120}/u.test(text)
     || /(希望|建議).{0,16}(老祖|系統|平台).{0,80}(可以|能|支援|新增)/u.test(text);
-  return { career, asksForPeople, capabilityRequest };
+  const problemReport = /(BUG|bug|問題|故障|錯誤|誤判|異常|繞進|誤觸|卡進).{0,100}(修|改|處理|解決|避開|繞過|判斷|專長|刊登|更新)/u.test(text)
+    || /(修|改|處理|解決|避開|繞過|判斷).{0,100}(BUG|bug|問題|故障|錯誤|誤判|異常|誤觸|專長更新)/u.test(text)
+    || /繞過.{0,80}(?:沒|未|還沒).{0,20}(?:改|修)(?:好|完|正)?/u.test(text);
+  return { career, asksForPeople, capabilityRequest, problemReport };
 }
 
 export async function recordCapabilitySuggestion(env, { text, userId = "", guildId = "" }) {
