@@ -31,7 +31,7 @@ async function payload(response) { return JSON.parse(await response.text()); }
 
 test("宗主管理面板提供手機常用操作按鈕", () => {
   const ids = masterAdminPanelComponents().flatMap(row => row.components.map(item => item.custom_id));
-  for (const action of ["add", "bind", "promote", "demote", "view", "remove", "match-profiles", "capabilities", "audit", "refresh"]) {
+  for (const action of ["add", "bind", "promote", "demote", "view", "remove", "match-profiles", "capabilities", "command-permissions", "audit", "refresh"]) {
     assert.ok(ids.includes(`sidney:admin:v1:${action}`));
   }
 });
@@ -46,6 +46,7 @@ test("宗主管理面板採用一致的專業操作層級且保留既有 Custom 
   assert.deepEqual(tools, [
     ["sidney:admin:v1:match-profiles", 1],
     ["sidney:admin:v1:capabilities", 1],
+    ["sidney:admin:v1:command-permissions", 1],
     ["sidney:admin:v1:audit", 2],
     ["sidney:admin:v1:refresh", 2]
   ]);
