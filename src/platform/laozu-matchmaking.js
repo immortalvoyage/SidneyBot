@@ -1,3 +1,5 @@
+import { getPlayerState } from "./player-state-storage.js";
+
 const PROFILE_PREFIX = "laozu:match:v1";
 
 function clean(value, maxLength) {
@@ -27,6 +29,11 @@ function scoreProfile(profile, need) {
     else if ([...offered].some(item => item.includes(word) || word.includes(item))) score += 1;
   }
   return score;
+}
+
+export async function getMatchProfile(env, guildId, userId) {
+  if (!env.BOT_MEMORY) return null;
+  return env.BOT_MEMORY.get(profileKey(guildId, userId), { type: "json" });
 }
 
 export async function publishMatchProfile(env, { guildId, member, skills, availability, note, consent }) {
@@ -64,13 +71,23 @@ export async function findMatchProfiles(env, { guildId, requesterId, need, membe
   const candidates = await Promise.all(
     members
       .filter(member => member?.active !== false && String(member?.userId) !== String(requesterId))
-      .map(member => env.BOT_MEMORY.get(profileKey(guildId, member.userId), { type: "json" }))
+      .map(async member => {
+        const [profile, playerState] = await Promise.all([
+          getMatchProfile(env, guildId, member.userId),
+          getPlayerState(env, member.userId)
+        ]);
+        if (!profile?.consent) return null;
+        return {
+          ...profile,
+          favor: Number(playerState?.relationship?.favor || 0)
+        };
+      })
   );
 
   return candidates
-    .filter(profile => profile?.consent === true)
+    .filter(Boolean)
     .map(profile => ({ ...profile, score: scoreProfile(profile, query) }))
     .filter(profile => profile.score > 0)
-    .sort((a, b) => b.score - a.score || a.displayName.localeCompare(b.displayName, "zh-Hant"))
-    .slice(0, 5);
+    .sort((a, b) => b.favor - a.favor || b.score - a.score || a.displayName.localeCompare(b.displayName, "zh-Hant"))
+    .slice(0, 3);
 }
