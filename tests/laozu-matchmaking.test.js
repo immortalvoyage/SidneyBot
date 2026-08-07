@@ -1,13 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  createMatchInvitation,
   confirmMatchProfileDraft,
   findMatchProfiles,
   getMatchProfile,
+  getMatchInvitation,
   normalizeSkills,
   parseMatchProfileDraft,
   publishMatchProfile,
   saveMatchProfileDraft,
+  resolveMatchInvitation,
   withdrawMatchProfile
 } from "../src/platform/laozu-matchmaking.js";
 
@@ -140,4 +143,52 @@ test("撤回後立即不再出現在媒合結果", async () => {
     guildId: "guild", requesterId: "1", need: "副本教學", members
   });
   assert.deepEqual(matches, []);
+});
+
+test("媒合邀請只有受邀者能接受，且不能重複回覆", async () => {
+  const storage = env();
+  await publishMatchProfile(storage, {
+    guildId: "guild", member: members[1], skills: "程式設計",
+    availability: "晚上", consent: "AGREE"
+  });
+  const invitation = await createMatchInvitation(storage, {
+    guildId: "guild", requester: members[0], target: members[1], need: "協助 Discord Bot"
+  });
+  assert.equal(invitation.status, "pending");
+  await assert.rejects(
+    resolveMatchInvitation(storage, { guildId: "guild", invitationId: invitation.id, targetId: "3", accept: true }),
+    /只有受邀者/
+  );
+  const accepted = await resolveMatchInvitation(storage, {
+    guildId: "guild", invitationId: invitation.id, targetId: "2", accept: true
+  });
+  assert.equal(accepted.status, "accepted");
+  assert.equal((await getMatchInvitation(storage, {
+    guildId: "guild", invitationId: invitation.id, viewerId: "1"
+  })).status, "accepted");
+  await assert.rejects(
+    resolveMatchInvitation(storage, { guildId: "guild", invitationId: invitation.id, targetId: "2", accept: false }),
+    /已經回覆過/
+  );
+});
+
+test("未公開刊登者不可被邀請，第三方不可讀取邀請", async () => {
+  const storage = env();
+  await assert.rejects(
+    createMatchInvitation(storage, {
+      guildId: "guild", requester: members[0], target: members[1], need: "協助剪輯"
+    }),
+    /沒有同意公開媒合/
+  );
+  await publishMatchProfile(storage, {
+    guildId: "guild", member: members[1], skills: "影片剪輯",
+    availability: "週末", consent: "AGREE"
+  });
+  const invitation = await createMatchInvitation(storage, {
+    guildId: "guild", requester: members[0], target: members[1], need: "協助剪輯"
+  });
+  await assert.rejects(
+    getMatchInvitation(storage, { guildId: "guild", invitationId: invitation.id, viewerId: "3" }),
+    /只有邀請雙方/
+  );
 });
