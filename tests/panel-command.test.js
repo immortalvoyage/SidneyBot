@@ -4,6 +4,8 @@ import { handlePanel } from "../src/commands/panel.js";
 
 function interaction(type, channelId = "1534238116099919933") {
   return {
+    application_id: "app-1",
+    token: "token-1",
     channel_id: channelId,
     member: { user: { id: "master-user", username: "master" } },
     data: {
