@@ -44,6 +44,12 @@ function terms(value) {
   );
 }
 
+function latinTokens(value) {
+  return String(value || "")
+    .toLocaleLowerCase("zh-Hant")
+    .match(/[a-z0-9][a-z0-9+#._-]{1,}/gu) || [];
+}
+
 function scoreProfile(profile, need) {
   const wantedText = clean(need, 700).toLocaleLowerCase("zh-Hant");
   const skillList = normalizeSkills(profile.skillList?.length ? profile.skillList : profile.skills);
@@ -55,6 +61,9 @@ function scoreProfile(profile, need) {
   for (const skill of skillList) {
     const normalizedSkill = skill.toLocaleLowerCase("zh-Hant");
     if (wantedText.includes(normalizedSkill)) score += 8;
+    for (const token of latinTokens(normalizedSkill)) {
+      if (wantedText.includes(token)) score += 6;
+    }
   }
   for (const word of wanted) {
     if (offered.has(word)) score += 3;
