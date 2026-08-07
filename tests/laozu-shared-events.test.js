@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   archiveSharedLaozuEvent,
+  buildBehaviorObservations,
   extractMentionedUserIds,
   formatSharedEventContext,
   loadSharedLaozuEvents,
+  queryArchivedLaozuEvents,
   recordSharedLaozuEvent
 } from "../src/platform/laozu-shared-events.js";
 
@@ -45,7 +47,7 @@ test("shares a public event with actor and mentioned player", async () => {
   assert.match(formatSharedEventContext(forTarget, "222222"), /不代表已查證事實/);
 });
 
-test("does not store events without another mentioned player", async () => {
+test("stores own conversation even without another mentioned player", async () => {
   const env = { BOT_MEMORY: memoryKv() };
   const result = await recordSharedLaozuEvent(env, {
     guildId: "999999",
@@ -54,7 +56,16 @@ test("does not store events without another mentioned player", async () => {
     eventId: "discord-event-2",
     text: "老祖今天好嗎"
   });
-  assert.equal(result, null);
+  assert.equal(result.actorId, "111111");
+  assert.deepEqual(result.participantIds, []);
+  assert.equal(result.observations.questionCount, 0);
+});
+
+test("records evidence signals without turning them into personality verdicts", () => {
+  const observations = buildBehaviorObservations("不好意思，謝謝妳！我可以接案嗎？");
+  assert.equal(observations.questionCount, 1);
+  assert.deepEqual(observations.signals, ["asks_question", "expresses_appreciation", "apologizes", "confirms_or_agrees", "career_or_capability_topic"]);
+  assert.equal(Object.hasOwn(observations, "personality"), false);
 });
 
 test("archives shared events through a signed Google Sheets webhook", async () => {
@@ -66,6 +77,21 @@ test("archives shared events through a signed Google Sheets webhook", async () =
   });
   assert.equal(result.archived, true);
   assert.equal(sent.url, "https://script.google.com/macros/s/example/exec");
-  assert.equal(sent.body.eventId, event.id);
+  assert.equal(sent.body.requestId, event.id);
+  assert.equal(sent.body.payload.action, "append");
   assert.match(sent.body.signature, /^[a-f0-9]{64}$/);
+});
+
+test("queries long-term archive with signed bounded identity scope", async () => {
+  let sent;
+  const events = [{ id: "old-1", actorId: "111111", text: "歷史事件" }];
+  const result = await queryArchivedLaozuEvents({ LAOZU_EVENT_ARCHIVE_URL: "https://script.google.com/macros/s/example/exec", LAOZU_EVENT_ARCHIVE_SECRET: "test-secret" }, { guildId: "999999", requesterId: "111111", userIds: ["111111", "222222"], limit: 99 }, async (url, options) => {
+    sent = JSON.parse(options.body);
+    return { ok: true, async json() { return { ok: true, events }; } };
+  });
+  assert.deepEqual(result, events);
+  assert.equal(sent.payload.action, "query");
+  assert.equal(sent.payload.limit, 12);
+  assert.equal(sent.payload.requesterId, "111111");
+  assert.match(sent.signature, /^[a-f0-9]{64}$/);
 });

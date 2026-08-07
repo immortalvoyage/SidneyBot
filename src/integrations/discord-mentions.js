@@ -22,6 +22,7 @@ import {
   extractMentionedUserIds,
   formatSharedEventContext,
   loadSharedLaozuEvents,
+  queryArchivedLaozuEvents,
   recordSharedLaozuEvent
 } from "../platform/laozu-shared-events.js";
 
@@ -349,22 +350,33 @@ export async function handleDiscordMentionEvent(request, env) {
   const sectContext = needsSectRosterContext(question, mentionedUserIds)
     ? formatSectRosterContext(await listMembers(env))
     : "";
-  const sharedEvents = guildId === "dm" ? [] : await loadSharedLaozuEvents(env, {
+  let sharedEvents = await loadSharedLaozuEvents(env, {
     guildId,
     userIds: [userId, ...mentionedUserIds],
     excludeEventId: eventId
   });
 
-  if (guildId !== "dm" && mentionedUserIds.length) {
-    await recordSharedLaozuEvent(env, {
-      guildId,
-      channelId,
-      actorId: userId,
-      participantIds: mentionedUserIds,
-      eventId,
-      text: question
-    });
+  if (!sharedEvents.length) {
+    try {
+      sharedEvents = await queryArchivedLaozuEvents(env, {
+        guildId,
+        requesterId: userId,
+        userIds: [userId, ...mentionedUserIds]
+      });
+    } catch (error) {
+      console.error("老祖事件歷史查詢失敗", error);
+    }
   }
+
+  await recordSharedLaozuEvent(env, {
+    guildId,
+    channelId,
+    actorId: userId,
+    participantIds: mentionedUserIds,
+    eventId,
+    text: question,
+    scope: guildId === "dm" ? "private" : "public"
+  });
 
   const managementReply = await processOwnListingManagement(env, { guildId, member, question });
   if (managementReply) {
