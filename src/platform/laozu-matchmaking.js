@@ -2,6 +2,7 @@ import { getPlayerState } from "./player-state-storage.js";
 
 const PROFILE_PREFIX = "laozu:match:v1";
 const DRAFT_PREFIX = "laozu:match-draft:v1";
+const INVITATION_PREFIX = "laozu:match-invitation:v1";
 
 function clean(value, maxLength) {
   return String(value || "").normalize("NFC").trim().slice(0, maxLength);
@@ -13,6 +14,14 @@ function profileKey(guildId, userId) {
 
 function draftKey(guildId, userId) {
   return `${DRAFT_PREFIX}:${guildId || "dm"}:${userId}`;
+}
+
+function invitationKey(guildId, invitationId) {
+  return `${INVITATION_PREFIX}:${guildId || "dm"}:${invitationId}`;
+}
+
+function invitationId() {
+  return `invite_${crypto.randomUUID()}`;
 }
 
 export function normalizeSkills(value) {
@@ -182,6 +191,59 @@ export async function confirmMatchProfileDraft(env, { guildId, member }) {
 export async function withdrawMatchProfile(env, guildId, userId) {
   if (!env.BOT_MEMORY) throw new Error("媒合資料庫尚未設定");
   await env.BOT_MEMORY.delete(profileKey(guildId, userId));
+}
+
+export async function createMatchInvitation(env, { guildId, requester, target, need }) {
+  if (!env.BOT_MEMORY) throw new Error("媒合資料庫尚未設定");
+  if (!requester?.userId || requester.active === false) throw new Error("只有仙遊者正式成員可以發出媒合邀請");
+  if (!target?.userId || target.active === false) throw new Error("邀請對象不是有效的仙遊者成員");
+  if (String(requester.userId) === String(target.userId)) throw new Error("不能邀請自己");
+
+  const profile = await getMatchProfile(env, guildId, target.userId);
+  if (!profile?.consent) throw new Error("對方目前沒有同意公開媒合");
+  const normalizedNeed = clean(need, 300);
+  if (normalizedNeed.length < 2) throw new Error("請說明希望對方協助的事項");
+
+  const record = {
+    version: 1,
+    id: invitationId(),
+    guildId: guildId || "dm",
+    requesterId: String(requester.userId),
+    requesterName: clean(requester.displayName || requester.username, 100) || "未記名仙友",
+    targetId: String(target.userId),
+    targetName: clean(target.displayName || target.username, 100) || profile.displayName || "未記名仙友",
+    need: normalizedNeed,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+    resolvedAt: null
+  };
+  await env.BOT_MEMORY.put(invitationKey(guildId, record.id), JSON.stringify(record), { expirationTtl: 604800 });
+  return record;
+}
+
+export async function getMatchInvitation(env, { guildId, invitationId: id, viewerId }) {
+  if (!env.BOT_MEMORY) return null;
+  const record = await env.BOT_MEMORY.get(invitationKey(guildId, id), { type: "json" });
+  if (!record) return null;
+  const viewer = String(viewerId || "");
+  if (![record.requesterId, record.targetId].includes(viewer)) throw new Error("只有邀請雙方可以查看這筆媒合邀請");
+  return record;
+}
+
+export async function resolveMatchInvitation(env, { guildId, invitationId: id, targetId, accept }) {
+  if (!env.BOT_MEMORY) throw new Error("媒合資料庫尚未設定");
+  const record = await env.BOT_MEMORY.get(invitationKey(guildId, id), { type: "json" });
+  if (!record) throw new Error("找不到這筆媒合邀請");
+  if (String(record.targetId) !== String(targetId)) throw new Error("只有受邀者可以回覆這筆媒合邀請");
+  if (record.status !== "pending") throw new Error("這筆媒合邀請已經回覆過了");
+
+  const updated = {
+    ...record,
+    status: accept === true ? "accepted" : "declined",
+    resolvedAt: new Date().toISOString()
+  };
+  await env.BOT_MEMORY.put(invitationKey(guildId, id), JSON.stringify(updated), { expirationTtl: 604800 });
+  return updated;
 }
 
 export async function listMatchProfiles(env, { guildId, members = [] }) {
