@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { handlePanel } from "../src/commands/panel.js";
 import { handleAdminInteraction } from "../src/interactions/admin-panel.js";
 import { adminCandidateSelect, masterAdminPanelComponents } from "../src/interactions/components.js";
 import { RANK } from "../src/sect/constants.js";
@@ -171,6 +172,57 @@ test("宗主主動綁定 UID 的 Modal 會先延遲回覆，完成後顯示成�
     assert.equal(second.type, 5);
     await Promise.all(secondPending);
     assert.match(edits.at(-1).content, /先前已成功綁定.*未重複寫入/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+
+test("面板建立成功時只靜默確認，建立失敗才保留錯誤訊息", async () => {
+  const env = createEnv();
+  const deletes = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    const target = String(url);
+    if (target.includes("/channels/1534238116099919933/messages")) {
+      return new Response(JSON.stringify({ id: "panel-message" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    if (target.includes("/webhooks/app-1/token-1/messages/@original")) {
+      deletes.push(init.method);
+      return new Response(null, { status: 204 });
+    }
+    throw new Error(`未預期的測試請求：${target}`);
+  };
+
+  try {
+    const pending = [];
+    const successInteraction = {
+      ...interaction("unused"),
+      application_id: "app-1",
+      token: "token-1",
+      data: { options: [{ name: "type", value: "admin" }] }
+    };
+    const success = await payload(await handlePanel(successInteraction, env, {
+      waitUntil(task) { pending.push(task); }
+    }));
+    assert.equal(success.type, 5);
+    assert.equal(success.data.flags, 64);
+    await Promise.all(pending);
+    assert.deepEqual(deletes, ["DELETE"]);
+
+    const failureInteraction = {
+      ...successInteraction,
+      channel_id: "other-channel"
+    };
+    const failure = await payload(await handlePanel(failureInteraction, env, {
+      waitUntil() {}
+    }));
+    assert.equal(failure.type, 4);
+    assert.equal(failure.data.flags, 64);
+    assert.match(failure.data.content, /只能建立在宗主審批私人頻道/);
   } finally {
     globalThis.fetch = originalFetch;
   }
