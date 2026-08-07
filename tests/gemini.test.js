@@ -5,6 +5,7 @@ import {
   askGemini,
   resolveGeminiSettings
 } from "../gemini.js";
+import { buildLaozuSystemPrompt } from "../src/prompts/prompt-builder.js";
 
 function okResponse(answer = "測試回答") {
   return {
@@ -97,6 +98,25 @@ test("名冊上下文禁止依 mention 猜測或編故事圓場", async () => {
   assert.match(prompt, /Discord 一般聊天優先控制在 3 個短段落內/);
   assert.match(prompt, /不輸出 Discord 數字 ID/);
   assert.match(prompt, /動作或神態描寫最多一句/);
+});
+
+test("目前說話者身分優先於遭污染的歷史稱呼", async () => {
+  const prompt = buildLaozuSystemPrompt({
+    member: {
+      userId: "123456789012345678",
+      displayName: "小手冰涼正常",
+      nickname: "小手冰涼正常",
+      rank: "disciple",
+      active: true
+    },
+    historySummary: "老祖先前錯把這名玩家叫成小月。"
+  });
+
+  assert.match(prompt, /Discord 使用者 ID：123456789012345678/);
+  assert.match(prompt, /老祖稱呼：小手冰涼正常/);
+  assert.match(prompt, /只能使用「老祖稱呼」/);
+  assert.match(prompt, /視為先前辨識錯誤，不得沿用/);
+  assert.match(prompt, /摘要中的人名不得覆蓋/);
 });
 
 test("沒有萬象錄資料時禁止老祖猜測關係狀態", async () => {

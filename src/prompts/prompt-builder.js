@@ -55,6 +55,7 @@ function buildMemberContext(member) {
   return `
 【目前說話者】
 
+Discord 使用者 ID：${normalizeText(String(member.userId || ""), 30) || "未提供"}
 Discord 名稱：${displayName}
 老祖稱呼：${nickname}
 宗門身份：${rankNames[rank] || rank}
@@ -62,6 +63,8 @@ Discord 名稱：${displayName}
 
 請依照此人的真實宗門身份回應。
 不得自行提升、降低或更改其身份。
+這一區是目前發話者的唯一身分來源。回覆開頭若要叫名字，只能使用「老祖稱呼」；不得把最近對話、共享事件、被 mention 玩家或其他名冊成員的姓名拿來稱呼目前發話者。
+即使最近對話中老祖曾用另一個名字稱呼此人，也視為先前辨識錯誤，不得沿用；應以本區資料立即更正。
 `;
 }
 
@@ -166,6 +169,7 @@ ${summary}
 
 摘要只用於維持對話連貫。
 若摘要與仙友目前說法衝突，應以目前訊息為準。
+摘要中的人名不得覆蓋「目前說話者」區塊，也不得據此替目前說話者取別名。
 `;
 }
 
