@@ -72,8 +72,10 @@ export async function handleCommand(
     const accessUser = getUser(interaction);
     await ensureMaster(env, accessUser);
     const accessMember = await getMember(env, accessUser.id);
-    if (!await canUseCommand(env, command, accessMember?.rank || null)) {
-      return immediateResponse("❌ 你的身分目前沒有使用此指令的權限。請輸入 `/help` 查看可用功能。", true);
+    const accessRank = String(accessUser.id) === String(env.SECT_MASTER_ID || "") ? "master" : (accessMember?.rank || null);
+    if (!await canUseCommand(env, command, accessRank)) {
+      const requirement = command === "members" ? "只有仙遊者成員可使用。" : (["audit", "system", "member"].includes(command) ? "只有宗主可使用。" : "你的身分目前沒有使用此指令的權限。");
+      return immediateResponse(`❌ ${requirement} 請輸入 \`/help\` 查看可用功能。`, true);
     }
 
     switch (command) {
