@@ -270,6 +270,35 @@ export const ENGLISH_COMMANDS = [
         type: 1
       },
       {
+        name: "invite",
+        description: "向已公開專長的成員提出私人媒合邀請",
+        type: 1,
+        options: [
+          { name: "player", description: "受邀的仙遊者成員", type: 6, required: true },
+          { name: "need", description: "希望對方協助的事項", type: 3, required: true, min_length: 2, max_length: 300 }
+        ]
+      },
+      {
+        name: "respond",
+        description: "由受邀者接受或婉拒私人媒合邀請",
+        type: 1,
+        options: [
+          { name: "invitation_id", description: "媒合邀請編號", type: 3, required: true },
+          { name: "decision", description: "接受或婉拒", type: 3, required: true, choices: [
+            { name: "接受", value: "accept" },
+            { name: "婉拒", value: "decline" }
+          ] }
+        ]
+      },
+      {
+        name: "invitation",
+        description: "僅限邀請雙方查看私人媒合邀請狀態",
+        type: 1,
+        options: [
+          { name: "invitation_id", description: "媒合邀請編號", type: 3, required: true }
+        ]
+      },
+      {
         name: "reprimand",
         description: "公開訓誡一名正式成員並降低好感（宗主）",
         type: 1,
