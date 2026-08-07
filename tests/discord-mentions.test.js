@@ -81,3 +81,12 @@ test("詢問老祖的學習能力不會建立專長草稿", () => {
   assert.equal(parseMatchProfileDraft("請問一下你目前還有學習的能力嗎？"), null);
   assert.equal(parseMatchProfileDraft("我的能力是程式設計")?.skills, "程式設計");
 });
+
+test("討論專長更新 BUG 不會建立專長草稿", () => {
+  for (const text of [
+    "專長更新",
+    "你怎麼又繞進專長更新了？",
+    "剛才那句話被你塞進專長更新",
+    "請修正專長更新的 BUG"
+  ]) assert.equal(parseMatchProfileDraft(text), null, text);
+});

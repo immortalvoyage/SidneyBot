@@ -322,11 +322,20 @@ async function buildAutonomyContext(env, { guildId, userId, question, sharedEven
     }
   }
 
-  if (intent.capabilityRequest) {
+  if (intent.capabilityRequest || intent.problemReport) {
     const suggestion = await recordCapabilitySuggestion(env, { text: question, userId, guildId });
     if (suggestion) {
       blocks.push("這段話已由程式登記為『老祖可能欠缺的能力／平台功能建議』，會送進宗主管理面板等待評估。相似需求會自動合併，不要宣稱功能已經存在或已經開發完成。若玩家只是詢問，仍先回答能做與不能做的部分。");
     }
+  }
+
+  if (intent.problemReport) {
+    blocks.push([
+      "【系統路由診斷】這句已被辨識為問題回報／修正提案，目前走一般對話路由。",
+      "本次沒有建立、更新、確認、取消或刪除任何專長刊登，也沒有產生待確認草稿。",
+      "你可以分析現象並提出修正建議，但不能聲稱自己已改寫程式、已繞過路由或已部署修正。",
+      "請明確區分：你能記錄問題與建立待宗主審核的提案；正式程式仍須經測試、Commit、部署及線上驗證。"
+    ].join("\n"));
   }
 
   if (!blocks.length) return question;
