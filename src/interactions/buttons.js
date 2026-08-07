@@ -19,11 +19,8 @@ import {
   applicationReviewComponents,
   parseApplicationReviewId,
   parseUidReviewId,
-  uidReviewComponents,
-  matchInvitationComponents,
-  parseMatchInvitationId
+  uidReviewComponents
 } from "./components.js";
-import { respondToMatchInvitation } from "../platform/laozu-matchmaking.js";
 import { handleAdminInteraction, isAdminInteraction } from "./admin-panel.js";
 import { handleRosterInteraction, isRosterInteraction } from "./roster.js";
 
@@ -31,8 +28,6 @@ export async function handleButton(interaction, env, ctx) {
   const customId = String(interaction.data?.custom_id || "");
   if (isRosterInteraction(customId)) return handleRosterInteraction(interaction, env);
   if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env, ctx);
-  const matchInvitation = parseMatchInvitationId(customId);
-  if (matchInvitation) return handleMatchInvitation(interaction, env, matchInvitation);
   if (customId === COMPONENT_IDS.DAILY_GREETING) {
     return handleDailyGreeting(interaction, env);
   }
@@ -44,28 +39,6 @@ export async function handleButton(interaction, env, ctx) {
   if (uidReview) return handleUidReview(interaction, env, uidReview);
 
   return immediateResponse("❌ 這個按鈕已失效，請聯絡宗主重新建立面板。", true);
-}
-
-async function handleMatchInvitation(interaction, env, matchInvitation) {
-  try {
-    const invitation = await respondToMatchInvitation(env, {
-      guildId: matchInvitation.guildId,
-      invitationId: matchInvitation.invitationId,
-      responderId: getUser(interaction).id,
-      decision: matchInvitation.decision
-    });
-    const accepted = invitation.status === "accepted";
-    return updateMessageResponse({
-      content: [
-        String(interaction.message?.content || ""), "",
-        accepted ? "✅ 你已接受這次媒合邀請。" : "🌙 你已婉拒這次媒合邀請。",
-        accepted ? "老祖已記錄雙方同意，接下來請彼此禮貌聯絡。" : "老祖尊重你的決定，不會將此次邀請視為媒合成立。"
-      ].join("\n"),
-      components: matchInvitationComponents(invitation.id, invitation.guildId, true)
-    });
-  } catch (error) {
-    return immediateResponse(`❌ ${error.message || "媒合邀請回覆失敗"}`, true);
-  }
 }
 
 async function handleUidReview(interaction, env, review) {
