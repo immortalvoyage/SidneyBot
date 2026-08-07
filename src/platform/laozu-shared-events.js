@@ -17,6 +17,10 @@ function eventKey(guildId, eventId) {
   return `laozu:shared-events:event:${guildId}:${eventId}`;
 }
 
+function privacyKey(guildId, userId) {
+  return `laozu:shared-events:privacy:${guildId}:${userId}`;
+}
+
 function uniqueUserIds(values) {
   return [...new Set((values || []).map(cleanSnowflake).filter(Boolean))];
 }
@@ -127,6 +131,60 @@ export async function queryArchivedLaozuEvents(env, { guildId, requesterId, user
   return result.events;
 }
 
+export async function getLaozuMemoryPrivacy(env, { guildId, userId } = {}) {
+  const cleanGuildId = cleanSnowflake(guildId);
+  const cleanUserId = cleanSnowflake(userId);
+  if (!env?.BOT_MEMORY || !cleanGuildId || !cleanUserId) return { sharePublicEvents: true };
+  const saved = await readJson(env.BOT_MEMORY, privacyKey(cleanGuildId, cleanUserId), null);
+  return { sharePublicEvents: saved?.sharePublicEvents !== false };
+}
+
+export async function setLaozuMemorySharing(env, { guildId, userId, enabled } = {}) {
+  const cleanGuildId = cleanSnowflake(guildId);
+  const cleanUserId = cleanSnowflake(userId);
+  if (!env?.BOT_MEMORY || !cleanGuildId || !cleanUserId) return null;
+  const value = { sharePublicEvents: enabled === true, updatedAt: new Date().toISOString() };
+  await env.BOT_MEMORY.put(privacyKey(cleanGuildId, cleanUserId), JSON.stringify(value));
+  return value;
+}
+
+export async function deleteOwnLaozuEvents(env, { guildId, userId } = {}, fetchImpl = fetch) {
+  const cleanGuildId = cleanSnowflake(guildId);
+  const cleanUserId = cleanSnowflake(userId);
+  if (!env?.BOT_MEMORY || !cleanGuildId || !cleanUserId) return { deleted: 0, archived: false };
+  const indexKey = userIndexKey(cleanGuildId, cleanUserId);
+  const ids = await readJson(env.BOT_MEMORY, indexKey, []);
+  let deleted = 0;
+  for (const id of ids) {
+    const key = eventKey(cleanGuildId, id);
+    const event = await readJson(env.BOT_MEMORY, key, null);
+    if (event?.actorId === cleanUserId) {
+      await env.BOT_MEMORY.delete(key);
+      deleted += 1;
+    }
+  }
+  await env.BOT_MEMORY.delete(indexKey);
+
+  const url = String(env?.LAOZU_EVENT_ARCHIVE_URL || "").trim();
+  const secret = String(env?.LAOZU_EVENT_ARCHIVE_SECRET || "").trim();
+  if (!url || !secret) return { deleted, archived: false };
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const requestId = `delete-${cleanUserId}-${timestamp}`;
+  const payload = { action: "delete_user", guildId: cleanGuildId, requesterId: cleanUserId, userId: cleanUserId };
+  const payloadJson = JSON.stringify(payload);
+  const signature = await hmacHex(secret, `${timestamp}.${requestId}.${payloadJson}`);
+  const response = await fetchImpl(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ timestamp, requestId, payload, signature }),
+    signal: AbortSignal.timeout(ARCHIVE_TIMEOUT_MS)
+  });
+  if (!response.ok) throw new Error(`老祖事件刪除 HTTP ${response.status}`);
+  const result = await response.json();
+  if (!result?.ok) throw new Error(`老祖事件刪除遭拒：${String(result?.error || "unknown_error")}`);
+  return { deleted, archived: true };
+}
+
 export async function recordSharedLaozuEvent(env, input) {
   const event = normalizeEvent(input);
   if (!env?.BOT_MEMORY || !event) return null;
@@ -152,7 +210,9 @@ export async function loadSharedLaozuEvents(env, { guildId, userIds, excludeEven
   if (!env?.BOT_MEMORY || !cleanGuildId || !cleanUserIds.length) return [];
   const indexes = await Promise.all(cleanUserIds.map(userId => readJson(env.BOT_MEMORY, userIndexKey(cleanGuildId, userId), [])));
   const ids = [...new Set(indexes.flat())].filter(id => id !== excludeEventId).slice(0, MAX_EVENTS_PER_USER);
-  const events = (await Promise.all(ids.map(id => readJson(env.BOT_MEMORY, eventKey(cleanGuildId, id), null)))).filter(Boolean);
+  const privacy = new Map(await Promise.all(cleanUserIds.map(async userId => [userId, await getLaozuMemoryPrivacy(env, { guildId: cleanGuildId, userId })])));
+  const events = (await Promise.all(ids.map(id => readJson(env.BOT_MEMORY, eventKey(cleanGuildId, id), null))))
+    .filter(event => event && (event.actorId === cleanUserIds[0] || privacy.get(event.actorId)?.sharePublicEvents !== false));
   return events.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, MAX_CONTEXT_EVENTS);
 }
 

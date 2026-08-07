@@ -6,6 +6,7 @@ function doPost(e) {
     const request = JSON.parse(String(e && e.postData && e.postData.contents || "{}"));
     validateLaozuEventArchiveRequest_(request);
     if (request.payload.action === "query") return jsonLaozuEventArchiveResponse_({ ok: true, events: queryLaozuEventArchive_(request.payload) });
+    if (request.payload.action === "delete_user") return jsonLaozuEventArchiveResponse_({ ok: true, deleted: deleteLaozuUserEvents_(request.payload) });
     const result = appendLaozuEventArchive_(request.payload.event);
     return jsonLaozuEventArchiveResponse_({ ok: true, duplicate: result.duplicate });
   } catch (error) {
@@ -21,13 +22,36 @@ function validateLaozuEventArchiveRequest_(request) {
   const requestId = String(request.requestId || "");
   const signature = String(request.signature || "").toLowerCase();
   if (!/^\d+$/.test(timestamp) || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) throw new Error("請求已過期");
-  if (!requestId || !request.payload || !/^(append|query)$/.test(String(request.payload.action || ""))) throw new Error("請求格式錯誤");
+  if (!requestId || !request.payload || !/^(append|query|delete_user)$/.test(String(request.payload.action || ""))) throw new Error("請求格式錯誤");
   if (request.payload.action === "append" && (!request.payload.event || request.payload.event.id !== requestId)) throw new Error("事件格式錯誤");
+  if (request.payload.action === "delete_user" && String(request.payload.requesterId || "") !== String(request.payload.userId || "")) throw new Error("只能刪除自己的事件");
   const content = timestamp + "." + requestId + "." + JSON.stringify(request.payload);
   const expected = Utilities.computeHmacSha256Signature(content, secret).map(function(byte) {
     return (byte < 0 ? byte + 256 : byte).toString(16).padStart(2, "0");
   }).join("");
   if (!constantTimeEqualLaozuArchive_(expected, signature)) throw new Error("簽章錯誤");
+}
+
+function deleteLaozuUserEvents_(request) {
+  const guildId = String(request.guildId || "");
+  const requesterId = String(request.requesterId || "");
+  const userId = String(request.userId || "");
+  if (!guildId || !requesterId || requesterId !== userId) throw new Error("刪除身分錯誤");
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(LAOZU_EVENT_ARCHIVE_SHEET);
+    if (!sheet || sheet.getLastRow() < 2) return 0;
+    const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, LAOZU_EVENT_ARCHIVE_HEADERS.length).getValues();
+    const deleteRows = [];
+    rows.forEach(function(row, index) {
+      if (String(row[1]) === guildId && String(row[3]) === userId) deleteRows.push(index + 2);
+    });
+    deleteRows.reverse().forEach(function(rowNumber) { sheet.deleteRow(rowNumber); });
+    return deleteRows.length;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function appendLaozuEventArchive_(event) {

@@ -5,9 +5,12 @@ import {
   buildBehaviorObservations,
   extractMentionedUserIds,
   formatSharedEventContext,
+  deleteOwnLaozuEvents,
+  getLaozuMemoryPrivacy,
   loadSharedLaozuEvents,
   queryArchivedLaozuEvents,
-  recordSharedLaozuEvent
+  recordSharedLaozuEvent,
+  setLaozuMemorySharing
 } from "../src/platform/laozu-shared-events.js";
 
 function memoryKv() {
@@ -18,7 +21,8 @@ function memoryKv() {
       if (value === undefined) return null;
       return options?.type === "json" ? JSON.parse(value) : value;
     },
-    async put(key, value) { values.set(key, value); }
+    async put(key, value) { values.set(key, value); },
+    async delete(key) { values.delete(key); }
   };
 }
 
@@ -27,6 +31,29 @@ test("extracts mentioned players but excludes Laozu", () => {
     extractMentionedUserIds("<@111111> 昨天綁架了 <@!222222> 和 <@222222>", "111111"),
     ["222222"]
   );
+});
+
+test("lets a player block their events from third-party shared context", async () => {
+  const env = { BOT_MEMORY: memoryKv() };
+  await recordSharedLaozuEvent(env, { guildId: "999999", actorId: "111111", participantIds: ["222222"], eventId: "private-choice-1", text: "不再對外分享" });
+  await setLaozuMemorySharing(env, { guildId: "999999", userId: "111111", enabled: false });
+  assert.deepEqual(await getLaozuMemoryPrivacy(env, { guildId: "999999", userId: "111111" }), { sharePublicEvents: false });
+  assert.equal((await loadSharedLaozuEvents(env, { guildId: "999999", userIds: ["222222", "111111"] })).length, 0);
+  assert.equal((await loadSharedLaozuEvents(env, { guildId: "999999", userIds: ["111111"] })).length, 1);
+});
+
+test("deletes only the requester's own KV and archived events", async () => {
+  const env = { BOT_MEMORY: memoryKv(), LAOZU_EVENT_ARCHIVE_URL: "https://script.google.com/macros/s/example/exec", LAOZU_EVENT_ARCHIVE_SECRET: "test-secret" };
+  await recordSharedLaozuEvent({ BOT_MEMORY: env.BOT_MEMORY }, { guildId: "999999", actorId: "111111", participantIds: [], eventId: "delete-me", text: "刪除我" });
+  let sent;
+  const result = await deleteOwnLaozuEvents(env, { guildId: "999999", userId: "111111" }, async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return { ok: true, async json() { return { ok: true }; } };
+  });
+  assert.deepEqual(result, { deleted: 1, archived: true });
+  assert.equal(sent.payload.action, "delete_user");
+  assert.equal(sent.payload.requesterId, "111111");
+  assert.equal((await loadSharedLaozuEvents(env, { guildId: "999999", userIds: ["111111"] })).length, 0);
 });
 
 test("shares a public event with actor and mentioned player", async () => {
