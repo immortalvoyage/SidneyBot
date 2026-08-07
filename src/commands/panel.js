@@ -1,4 +1,9 @@
-import { immediateResponse, sendChannelMessage } from "../../discord.js";
+import {
+  deferredResponse,
+  deleteOriginalResponse,
+  immediateResponse,
+  sendChannelMessage
+} from "../../discord.js";
 import { getUser } from "../../utils.js";
 import { resolveActor } from "../sect/service.js";
 import { canApprove } from "../sect/permissions.js";
@@ -6,7 +11,7 @@ import { dailyGreetingComponents, masterAdminPanelComponents } from "../interact
 import { isSectMaster } from "../sect/permissions.js";
 import { isMasterAdminChannel } from "../platform/channels.js";
 
-export async function handlePanel(interaction, env) {
+export async function handlePanel(interaction, env, ctx) {
   try {
     const actor = await resolveActor(env, getUser(interaction));
     const panelType = interaction.data?.options?.find(option => option.name === "type")?.value;
@@ -29,7 +34,8 @@ export async function handlePanel(interaction, env) {
         "> 所有操作都會再次驗證宗主身分並寫入紀錄。",
         "> 綁定 UID 後升為門徒；退出百業時保留 UID 與歷史資料。"
       ].join("\n"), { components: masterAdminPanelComponents() });
-      return immediateResponse("✅ 宗主管理面板已建立。", true);
+      acknowledgePanelCreated(interaction, ctx);
+      return deferredResponse(true);
     }
     if (!actor || !canApprove(actor.rank)) {
       throw new Error("只有宗主或長老可以建立請安面板");
@@ -45,8 +51,24 @@ export async function handlePanel(interaction, env) {
       ].join("\n"),
       { components: dailyGreetingComponents() }
     );
-    return immediateResponse("✅ 每日請安面板已建立在目前頻道。", true);
+    acknowledgePanelCreated(interaction, ctx);
+    return deferredResponse(true);
   } catch (error) {
     return immediateResponse(`❌ ${error.message || "面板建立失敗"}`, true);
   }
+}
+
+
+function acknowledgePanelCreated(interaction, ctx) {
+  const task = deleteOriginalResponse(
+    interaction.application_id,
+    interaction.token
+  );
+
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(task);
+    return;
+  }
+
+  task.catch(() => {});
 }
