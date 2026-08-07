@@ -110,11 +110,11 @@ export async function handleLaozu(interaction, env, ctx) {
         });
         return immediateResponse([
           "✅ 老祖已建立私人媒合邀請。",
-          `邀請編號：\\`${invitation.id}\\``,
+          `邀請編號：\`${invitation.id}\``,
           `受邀者：<@${invitation.targetId}>`,
           `需求：${invitation.need}`,
           "請將邀請編號交給對方；接受前不會視為媒合成立。"
-        ].join("\\n"), true);
+        ].join("\n"), true);
       }
 
       if (action === "respond") {
@@ -126,10 +126,10 @@ export async function handleLaozu(interaction, env, ctx) {
         });
         return immediateResponse([
           invitation.status === "accepted" ? "✅ 你已接受媒合邀請。" : "✅ 你已婉拒媒合邀請。",
-          `邀請編號：\\`${invitation.id}\\``,
+          `邀請編號：\`${invitation.id}\``,
           `邀請者：<@${invitation.requesterId}>`,
           invitation.status === "accepted" ? "媒合已取得雙方同意，請自行禮貌聯絡。" : "老祖已記錄結果。"
-        ].join("\\n"), true);
+        ].join("\n"), true);
       }
 
       if (action === "invitation") {
@@ -140,12 +140,12 @@ export async function handleLaozu(interaction, env, ctx) {
         const labels = { pending: "等待回覆", accepted: "已接受", declined: "已婉拒" };
         return immediateResponse([
           "## 老祖私人媒合邀請",
-          `邀請編號：\\`${invitation.id}\\``,
+          `邀請編號：\`${invitation.id}\``,
           `邀請者：<@${invitation.requesterId}>`,
           `受邀者：<@${invitation.targetId}>`,
           `需求：${invitation.need}`,
           `狀態：${labels[invitation.status] || invitation.status}`
-        ].join("\\n"), true);
+        ].join("\n"), true);
       }
 
       const matches = await findMatchProfiles(env, {
