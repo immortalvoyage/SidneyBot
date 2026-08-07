@@ -9,9 +9,19 @@ import { GAME_IDS } from "../platform/games/constants.js";
 import { approveGameBinding, getGameAccountByUser, requestGameBinding } from "../platform/games/service.js";
 import { listAudits } from "../sect/audit.js";
 import { notifyMember } from "../sect/notifications.js";
-import { adminCandidateSelect, adminRemoveConfirmComponents, adminUidModal, capabilitySuggestionComponents, COMPONENT_IDS, masterAdminPanelComponents } from "./components.js";
+import {
+  adminCandidateSelect,
+  adminRemoveConfirmComponents,
+  adminUidModal,
+  capabilitySuggestionComponents,
+  COMPONENT_IDS,
+  masterAdminPanelComponents,
+  matchProfileAdminComponents,
+  matchProfileManageComponents
+} from "./components.js";
 import { isMasterAdminChannel } from "../platform/channels.js";
 import { listCapabilitySuggestions, resolveCapabilitySuggestion } from "../platform/laozu-autonomy.js";
+import { getMatchProfile, listMatchProfiles, withdrawMatchProfile } from "../platform/laozu-matchmaking.js";
 
 const PREFIX = `${COMPONENT_IDS.ADMIN_PREFIX}:`;
 
@@ -58,6 +68,9 @@ export async function handleAdminInteraction(interaction, env, ctx) {
       const [, action, page] = key.split(":");
       return candidateResponse(interaction, env, action, page, true);
     }
+    if (key === "match-profiles") return matchProfilesResponse(interaction, env);
+    if (key === "match-profile-select") return matchProfileDetailsResponse(interaction, env);
+    if (key.startsWith("match-profile-remove:")) return removeMatchProfileResponse(interaction, env, key.slice("match-profile-remove:".length));
     if (key === "capabilities") return capabilityQueueResponse(env);
     if (key.startsWith("capability:")) {
       const [, decision, id] = key.split(":");
@@ -224,7 +237,7 @@ async function handleRosterSelectionData(interaction, env, actor, action, userId
 async function handleSelection(interaction, env, actor, action, selectedMember = null) {
   const target = selectedMember ? { id: selectedMember.userId, username: selectedMember.username, displayName: selectedMember.displayName } : selectedUser(interaction);
   if (!target.id) throw new Error("沒有選到玩家");
-  const sync = (userId, rank) => syncDiscordMemberRank(env, interaction.guild_id, userId, rank);
+  const sync = (userId, rank) => syncDiscordMemberRank(env, interaction.guild_id, id, rank);
   if (action === "add") {
     const result = await enrollMemberByMaster(env, actor, target, RANK.RESIDENT, "由宗主管理面板新增領民", sync);
     if (!result.created) throw new Error("該玩家已在仙遊者名冊中");
@@ -324,12 +337,71 @@ async function recentAudit(env) {
   return immediateResponse(["## 最近 10 筆操作紀錄", ...(rows.length ? rows.map(row => `• ${row.createdAt}｜${row.action}｜目標 ${row.targetId || "-"}`) : ["目前沒有操作紀錄。"])].join("\n"), true);
 }
 
+async function matchProfilesData(interaction, env) {
+  const profiles = await listMatchProfiles(env, { guildId: interaction.guild_id || "dm", members: await listMembers(env) });
+  const visible = profiles.slice(0, 25);
+  return {
+    profiles: visible,
+    content: [
+      "## 📋 老祖｜專長刊登管理",
+      `目前共有 ${profiles.length} 位仙友完成公開刊登。這裡顯示的是**實際已寫入媒合資料庫**的內容。`,
+      "",
+      ...(visible.length ? visible.map((profile, index) => [
+        `${index + 1}. **${profile.displayName}**（<@${profile.userId}>）`,
+        `   專長：${profile.skills || "未填"}`,
+        `   方便時間：${profile.availability || "請私下協調"}`,
+        profile.note ? `   備註：${profile.note}` : null,
+        `   最後更新：${profile.updatedAt || "-"}`
+      ].filter(Boolean).join("\n")) : ["目前沒有任何已完成的公開刊登。"]),
+      profiles.length > 25 ? "\n⚠️ 目前僅顯示前 25 筆，後續會加入分頁。" : ""
+    ].filter(Boolean).join("\n"),
+    components: matchProfileAdminComponents(visible)
+  };
+}
+
+async function matchProfilesResponse(interaction, env) {
+  const data = await matchProfilesData(interaction, env);
+  return updateMessageResponse({ content: data.content, components: data.components });
+}
+
+async function matchProfileDetailsResponse(interaction, env) {
+  const userId = String(interaction.data?.values?.[0] || "");
+  if (!/^\d+$/.test(userId)) throw new Error("沒有選到有效的刊登資料");
+  const profile = await getMatchProfile(env, interaction.guild_id || "dm", userId);
+  if (!profile?.consent) throw new Error("這筆刊登已不存在或已撤回");
+  return updateMessageResponse({
+    content: [
+      "## 📋 專長刊登詳細資料",
+      `玩家：${profile.displayName || "未記名仙友"}（<@${userId}>）`,
+      `專長：${profile.skills || "未填"}`,
+      `方便時間：${profile.availability || "請私下協調"}`,
+      profile.note ? `備註：${profile.note}` : null,
+      `最後更新：${profile.updatedAt || "-"}`,
+      "",
+      "只有宗主可以從這裡撤下刊登；撤下後老祖不會再向其他玩家媒合此資料。"
+    ].filter(Boolean).join("\n"),
+    components: matchProfileManageComponents(userId)
+  });
+}
+
+async function removeMatchProfileResponse(interaction, env, userId) {
+  if (!/^\d+$/.test(String(userId || ""))) throw new Error("刊登資料識別碼無效");
+  const profile = await getMatchProfile(env, interaction.guild_id || "dm", userId);
+  if (!profile?.consent) throw new Error("這筆刊登已不存在或已撤回");
+  await withdrawMatchProfile(env, interaction.guild_id || "dm", userId);
+  const data = await matchProfilesData(interaction, env);
+  return updateMessageResponse({
+    content: `✅ 已由宗主管理介面撤下 ${profile.displayName || `<@${userId}>`} 的公開專長刊登。\n\n${data.content}`,
+    components: data.components
+  });
+}
+
 async function capabilityQueueData(env) {
   const items = await listCapabilitySuggestions(env, 5);
   return {
     content: [
       "## 🧠 老祖｜能力建議評估",
-      "老祖會把聊天中判斷為『目前平台可能欠缺的能力』列在這裡。拒絕後會進入黑名單，不再重新加入同一筆需求。",
+      "老祖會把聊天中判斷為『目前平台可能欠缺的能力』列在這裡。語意相近的需求會自動合併；拒絕後會進入黑名單，不再重新加入相同或高度相似的需求。",
       "",
       ...(items.length ? items.map((item, index) => `${index + 1}. **${item.text}**\n   出現 ${item.count || 1} 次｜最後：${item.lastSeenAt || "-"}`) : ["目前沒有待評估能力建議。"])
     ].join("\n"),
