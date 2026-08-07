@@ -1,7 +1,7 @@
 import { componentResponse, updateMessageResponse } from "../../discord.js";
 import { getUser } from "../../utils.js";
 import { ensureMaster, getMember } from "../sect/members.js";
-import { listCommandPolicies, rankLabel } from "./command-access.js";
+import { listCommandPolicies, rankLabel } from "../commands/command-access.js";
 
 export const HELP_PREFIX = "immortalvoyage:help:v1:";
 
