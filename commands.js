@@ -88,7 +88,7 @@ export async function handleCommand(
       case "review":
         return await handleReview(interaction, env, ctx);
       case "panel":
-        return await handlePanel(interaction, env);
+        return await handlePanel(interaction, env, ctx);
 
       case "members":
         return await handleMembers(interaction, env);
