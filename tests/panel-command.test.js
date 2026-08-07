@@ -35,21 +35,32 @@ function env() {
   };
 }
 
-test("explicit greeting type creates daily greeting panel even in master admin channel", async () => {
+test("explicit greeting type creates daily greeting panel and silently clears success confirmation", async () => {
   const originalFetch = globalThis.fetch;
   let body;
-  globalThis.fetch = async (_url, options) => {
+  const deletes = [];
+  globalThis.fetch = async (_url, options = {}) => {
+    if (options.method === "DELETE") {
+      deletes.push(options.method);
+      return new Response(null, { status: 204 });
+    }
     body = JSON.parse(options.body);
     return { ok: true, json: async () => ({ id: "message-1" }) };
   };
 
   try {
-    const response = await handlePanel(interaction("greeting"), env());
+    const pending = [];
+    const response = await handlePanel(interaction("greeting"), env(), {
+      waitUntil(task) { pending.push(task); }
+    });
     const responseBody = await response.json();
+    await Promise.all(pending);
 
     assert.match(body.content, /老祖每日請安/);
     assert.equal(body.components[0].components[0].custom_id, "sidney:greeting:v1");
-    assert.match(responseBody.data.content, /每日請安面板已建立/);
+    assert.equal(responseBody.type, 5);
+    assert.equal(responseBody.data.flags, 64);
+    assert.deepEqual(deletes, ["DELETE"]);
   } finally {
     globalThis.fetch = originalFetch;
   }
