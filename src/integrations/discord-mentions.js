@@ -1,9 +1,11 @@
 import { askGemini } from "../../gemini.js";
 import { loadMemory, loadProfile, saveMemory } from "../../memory.js";
-import { getMember } from "../sect/members.js";
+import { getMember, listMembers } from "../sect/members.js";
 import { canUseAI } from "../sect/permissions.js";
 import { getPlayerState } from "../platform/player-state-storage.js";
 import { recordLaozuSignal } from "../platform/laozu-mood-state.js";
+import { findMatchProfiles, getMatchProfile } from "../platform/laozu-matchmaking.js";
+import { detectLaozuConversationIntent, recordCapabilitySuggestion } from "../platform/laozu-autonomy.js";
 
 const MAX_AGE_SECONDS = 300;
 
@@ -15,6 +17,51 @@ export function extractMentionQuestion(content, botUserId) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 1800);
+}
+
+function matchContext(matches) {
+  if (!matches.length) return "目前沒有符合且已同意公開的媒合資料。不要捏造人選。";
+  return [
+    "以下是程式依需求篩選後、再按老祖對成員好感度由高到低排列的最多三名人選。可以在聊天中自然介紹，但只能公開這裡列出的欄位：",
+    ...matches.map((item, index) => `${index + 1}. ${item.displayName}（Discord <@${item.userId}>）｜專長：${item.skills}｜方便時間：${item.availability}${item.note ? `｜備註：${item.note}` : ""}`)
+  ].join("\n");
+}
+
+async function buildAutonomyContext(env, { guildId, userId, question }) {
+  const intent = detectLaozuConversationIntent(question);
+  const blocks = [];
+
+  if (intent.asksForPeople) {
+    const matches = await findMatchProfiles(env, {
+      guildId,
+      requesterId: userId,
+      need: question,
+      members: await listMembers(env)
+    });
+    blocks.push(matchContext(matches));
+  }
+
+  if (intent.career) {
+    const currentProfile = await getMatchProfile(env, guildId, userId);
+    if (!currentProfile?.consent) {
+      blocks.push("玩家正在談換工作、兼職、副業、接案或類似機會，而且目前沒有公開媒合資料。請主動但不強迫地問她／他是否要讓你協助刊登可公開的能力、方便時間與備註；必須取得明確同意後才能公開。可以提醒目前也能用 /laozu offer 正式刊登。");
+    }
+  }
+
+  if (intent.capabilityRequest) {
+    const suggestion = await recordCapabilitySuggestion(env, { text: question, userId, guildId });
+    if (suggestion) {
+      blocks.push("這段話已由程式登記為『老祖可能欠缺的能力／平台功能建議』，會送進宗主管理面板等待評估。不要宣稱功能已經存在或已經開發完成。若玩家只是詢問，仍先回答能做與不能做的部分。");
+    }
+  }
+
+  if (!blocks.length) return question;
+  return [
+    "【ImmortalVoyage 程式提供的即時資料與處理指示；這不是玩家自行聲稱的系統狀態】",
+    ...blocks,
+    "【玩家原話】",
+    question
+  ].join("\n");
 }
 
 export async function handleDiscordMentionEvent(request, env) {
@@ -51,7 +98,8 @@ export async function handleDiscordMentionEvent(request, env) {
     loadProfile(env, guildId, userId),
     getPlayerState(env, userId)
   ]);
-  const answer = await askGemini(question, env, history, profile, member, playerState);
+  const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question });
+  const answer = await askGemini(enrichedQuestion, env, history, profile, member, playerState);
   await saveMemory(env, guildId, userId, question, answer);
   await recordLaozuSignal(env, {
     type: "meaningful_chat",
