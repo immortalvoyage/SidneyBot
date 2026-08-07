@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { inspectHealthPayload, inspectRegisteredCommands, resolveWorkerUrl } from "../scripts/post-deploy-verify.js";
+import { inspectHealthPayload, inspectRegisteredCommands, resolveDiscordRegistration, resolveWorkerUrl } from "../scripts/post-deploy-verify.js";
 
 test("部署後檢查要求正確版本、記憶控制與人物識別", () => {
   const checks = inspectHealthPayload({
@@ -28,4 +28,13 @@ test("部署後檢查可從公開發布設定取得 Worker URL，環境變數仍
   const packageJson = { release: { workerPublicUrl: "https://default.example.workers.dev/" } };
   assert.equal(resolveWorkerUrl({}, packageJson), "https://default.example.workers.dev");
   assert.equal(resolveWorkerUrl({ WORKER_PUBLIC_URL: "https://override.example.workers.dev/" }, packageJson), "https://override.example.workers.dev");
+});
+
+test("Discord 指令驗證只在三項註冊環境變數完整時啟用", () => {
+  assert.equal(resolveDiscordRegistration({}).complete, false);
+  assert.equal(resolveDiscordRegistration({
+    DISCORD_APPLICATION_ID: "app",
+    DISCORD_GUILD_ID: "guild",
+    DISCORD_BOT_TOKEN: "token"
+  }).complete, true);
 });

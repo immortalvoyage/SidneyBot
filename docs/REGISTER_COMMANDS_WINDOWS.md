@@ -40,6 +40,6 @@ npm run deploy
 npm run release:verify
 ```
 
-`release:verify` 會只顯示檢查結果，不會輸出 Token。請先在 `.dev.vars` 設定 `WORKER_PUBLIC_URL`（正式 Worker 的公開網址）；它會確認正式 `/healthz` 版本、記憶控制、人物識別能力及 Guild 內的 `/laozu memory` 註冊結果。
+`release:verify` 會只顯示檢查結果，不會輸出 Token。Worker 公開網址由專案發布設定提供；Sidney 電腦的 `.dev.vars` 必須包含 `DISCORD_APPLICATION_ID`、`DISCORD_GUILD_ID` 與 `DISCORD_BOT_TOKEN`，才能一併確認 Guild 內的 `/laozu memory` 註冊結果。若 Discord 設定未載入，Worker 檢查仍會執行，並明確標示只有 Guild 指令尚未驗證。
 
 `release:check` 只檢查環境變數名稱，不會顯示 Token 或 Secret 的內容。若提示本機與 `origin/main` 不一致，先回到 GitHub Desktop 執行 `Fetch origin` 與 `Pull origin`。

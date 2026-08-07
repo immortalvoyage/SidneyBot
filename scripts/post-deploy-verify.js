@@ -27,6 +27,18 @@ export function resolveWorkerUrl(environment = process.env, packageJson = {}) {
   return String(environment.WORKER_PUBLIC_URL || packageJson.release?.workerPublicUrl || "").replace(/\/$/, "");
 }
 
+export function resolveDiscordRegistration(environment = process.env) {
+  const applicationId = String(environment.DISCORD_APPLICATION_ID || "");
+  const guildId = String(environment.DISCORD_GUILD_ID || "");
+  const botToken = String(environment.DISCORD_BOT_TOKEN || "");
+  return {
+    applicationId,
+    guildId,
+    botToken,
+    complete: Boolean(applicationId && guildId && botToken)
+  };
+}
+
 function loadLocalEnvironment(path = ".dev.vars") {
   if (!existsSync(path)) return;
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -45,18 +57,22 @@ async function run() {
   loadLocalEnvironment();
   const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
   const workerUrl = resolveWorkerUrl(process.env, packageJson);
-  const applicationId = process.env.DISCORD_APPLICATION_ID;
-  const guildId = process.env.DISCORD_GUILD_ID;
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!workerUrl || !applicationId || !guildId || !botToken) {
-    throw new Error("缺少 WORKER_PUBLIC_URL 或 Discord 註冊環境變數；請只在 Sidney 電腦的 .dev.vars 設定。");
-  }
+  if (!workerUrl) throw new Error("缺少 Worker 公開網址設定。");
 
   const health = await fetchJson(`${workerUrl}/healthz`);
-  const commands = await fetchJson(`https://discord.com/api/v10/applications/${applicationId}/guilds/${guildId}/commands`, {
-    headers: { Authorization: `Bot ${botToken}` }
-  });
-  const checks = [...inspectHealthPayload(health, packageJson.version), ...inspectRegisteredCommands(commands)];
+  const checks = inspectHealthPayload(health, packageJson.version);
+  const discord = resolveDiscordRegistration(process.env);
+  if (discord.complete) {
+    const commands = await fetchJson(`https://discord.com/api/v10/applications/${discord.applicationId}/guilds/${discord.guildId}/commands`, {
+      headers: { Authorization: `Bot ${discord.botToken}` }
+    });
+    checks.push(...inspectRegisteredCommands(commands));
+  } else {
+    checks.push({
+      ok: false,
+      message: "Discord Guild 指令未驗證：請只在 Sidney 電腦的 .dev.vars 設定三項 Discord 註冊環境變數"
+    });
+  }
   for (const check of checks) console.log(`${check.ok ? "✅" : "❌"} ${check.message}`);
   if (checks.some((check) => !check.ok)) process.exitCode = 1;
   else console.log("\n正式 Worker 與 Discord 指令註冊驗證通過。");
