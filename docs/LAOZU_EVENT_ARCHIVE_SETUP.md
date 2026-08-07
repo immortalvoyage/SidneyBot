@@ -12,6 +12,8 @@
 2. 將 Apps Script 部署為網頁應用程式，執行身分選擇部署者，存取權限選擇允許 Cloudflare 呼叫的範圍。
 3. 將部署後 `/exec` URL 設為 Cloudflare Secret `LAOZU_EVENT_ARCHIVE_URL`。
 4. 將相同密鑰設為 Cloudflare Secret `LAOZU_EVENT_ARCHIVE_SECRET`；不得寫入 Git 或一般文件。
+
+部署新版 Apps Script 後，`npm run release:verify` 會送出具 HMAC 簽章的 `health` 動作，驗證端點、Secret 與 `delete_user` 能力。此探測不包含玩家 ID，也不會新增、查詢或刪除試算表資料。
 5. 重新部署 Apps Script 與 Cloudflare Worker，再用公開頻道的跨玩家 `@老祖` 訊息驗證。
 
 ## 正確結果

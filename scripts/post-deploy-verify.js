@@ -39,6 +39,35 @@ export function resolveDiscordRegistration(environment = process.env) {
   };
 }
 
+export function resolveArchiveVerification(environment = process.env) {
+  const url = String(environment.LAOZU_EVENT_ARCHIVE_URL || "").trim();
+  const secret = String(environment.LAOZU_EVENT_ARCHIVE_SECRET || "").trim();
+  return { url, secret, complete: Boolean(url && secret) };
+}
+
+async function hmacHex(secret, message) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(message)));
+  return [...bytes].map((value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+export async function verifyArchiveEndpoint({ url, secret }, fetchImpl = fetch) {
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const requestId = `health-${timestamp}`;
+  const payload = { action: "health" };
+  const signature = await hmacHex(secret, `${timestamp}.${requestId}.${JSON.stringify(payload)}`);
+  const result = await fetchJson(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ timestamp, requestId, payload, signature })
+  }, fetchImpl);
+  return [{
+    ok: result?.ok === true && result?.service === "laozu-event-archive" && result?.capabilities?.deleteUser === true,
+    message: "Apps Script 歸檔端點與 delete_user 能力驗證通過"
+  }];
+}
+
 function loadLocalEnvironment(path = ".dev.vars") {
   if (!existsSync(path)) return;
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -47,8 +76,8 @@ function loadLocalEnvironment(path = ".dev.vars") {
   }
 }
 
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, options);
+async function fetchJson(url, options = {}, fetchImpl = fetch) {
+  const response = await fetchImpl(url, options);
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
   return response.json();
 }
@@ -61,6 +90,9 @@ async function run() {
 
   const health = await fetchJson(`${workerUrl}/healthz`);
   const checks = inspectHealthPayload(health, packageJson.version);
+  const archive = resolveArchiveVerification(process.env);
+  if (archive.complete) checks.push(...await verifyArchiveEndpoint(archive));
+  else checks.push({ ok: false, message: "Apps Script 串接未驗證：缺少 LAOZU_EVENT_ARCHIVE_URL 或 LAOZU_EVENT_ARCHIVE_SECRET" });
   const discord = resolveDiscordRegistration(process.env);
   if (discord.complete) {
     const commands = await fetchJson(`https://discord.com/api/v10/applications/${discord.applicationId}/guilds/${discord.guildId}/commands`, {

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { inspectHealthPayload, inspectRegisteredCommands, resolveDiscordRegistration, resolveWorkerUrl } from "../scripts/post-deploy-verify.js";
+import { inspectHealthPayload, inspectRegisteredCommands, resolveArchiveVerification, resolveDiscordRegistration, resolveWorkerUrl, verifyArchiveEndpoint } from "../scripts/post-deploy-verify.js";
 
 test("部署後檢查要求正確版本、記憶控制與人物識別", () => {
   const checks = inspectHealthPayload({
@@ -37,4 +37,21 @@ test("Discord 指令驗證只在三項註冊環境變數完整時啟用", () => 
     DISCORD_GUILD_ID: "guild",
     DISCORD_BOT_TOKEN: "token"
   }).complete, true);
+});
+
+test("Apps Script 驗證只在 URL 與 Secret 完整時啟用", () => {
+  assert.equal(resolveArchiveVerification({}).complete, false);
+  assert.equal(resolveArchiveVerification({ LAOZU_EVENT_ARCHIVE_URL: "https://script.google.com/exec", LAOZU_EVENT_ARCHIVE_SECRET: "secret" }).complete, true);
+});
+
+test("Apps Script 健康探測使用簽章且不傳送玩家資料", async () => {
+  let sent;
+  const checks = await verifyArchiveEndpoint({ url: "https://script.google.com/exec", secret: "secret" }, async (url, options) => {
+    sent = { url, body: JSON.parse(options.body) };
+    return { ok: true, json: async () => ({ ok: true, service: "laozu-event-archive", capabilities: { deleteUser: true } }) };
+  });
+  assert.equal(checks[0].ok, true);
+  assert.equal(sent.body.payload.action, "health");
+  assert.equal("userId" in sent.body.payload, false);
+  assert.match(sent.body.signature, /^[a-f0-9]{64}$/);
 });

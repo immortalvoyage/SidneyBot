@@ -5,6 +5,7 @@ function doPost(e) {
   try {
     const request = JSON.parse(String(e && e.postData && e.postData.contents || "{}"));
     validateLaozuEventArchiveRequest_(request);
+    if (request.payload.action === "health") return jsonLaozuEventArchiveResponse_({ ok: true, service: "laozu-event-archive", capabilities: { append: true, query: true, deleteUser: true } });
     if (request.payload.action === "query") return jsonLaozuEventArchiveResponse_({ ok: true, events: queryLaozuEventArchive_(request.payload) });
     if (request.payload.action === "delete_user") return jsonLaozuEventArchiveResponse_({ ok: true, deleted: deleteLaozuUserEvents_(request.payload) });
     const result = appendLaozuEventArchive_(request.payload.event);
@@ -22,7 +23,7 @@ function validateLaozuEventArchiveRequest_(request) {
   const requestId = String(request.requestId || "");
   const signature = String(request.signature || "").toLowerCase();
   if (!/^\d+$/.test(timestamp) || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) throw new Error("請求已過期");
-  if (!requestId || !request.payload || !/^(append|query|delete_user)$/.test(String(request.payload.action || ""))) throw new Error("請求格式錯誤");
+  if (!requestId || !request.payload || !/^(append|query|delete_user|health)$/.test(String(request.payload.action || ""))) throw new Error("請求格式錯誤");
   if (request.payload.action === "append" && (!request.payload.event || request.payload.event.id !== requestId)) throw new Error("事件格式錯誤");
   if (request.payload.action === "delete_user" && String(request.payload.requesterId || "") !== String(request.payload.userId || "")) throw new Error("只能刪除自己的事件");
   const content = timestamp + "." + requestId + "." + JSON.stringify(request.payload);
