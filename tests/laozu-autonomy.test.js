@@ -34,6 +34,12 @@ test("辨識換工作、找人與平台能力需求", () => {
   assert.equal(detectLaozuConversationIntent("老祖妳能不能幫我記錄活動報名？").capabilityRequest, true);
 });
 
+test("辨識一般對話中的誤判與 BUG 回報為修正提案", () => {
+  assert.equal(detectLaozuConversationIntent("你怎麼又繞進專長更新了？這個 BUG 能不能修正").problemReport, true);
+  assert.equal(detectLaozuConversationIntent("那你先幫我繞過去啊，我現在就還沒改好").problemReport, true);
+  assert.equal(detectLaozuConversationIntent("我的專長是程式設計").problemReport, false);
+});
+
 test("語意相近的能力需求會合併成同一筆", async () => {
   const storage = env();
   await recordCapabilitySuggestion(storage, {
