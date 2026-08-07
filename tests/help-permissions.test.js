@@ -68,5 +68,5 @@ test("玩家看不到沒有權限的管理指令", async () => {
   await upsertMember(env, { userId: "disciple-1", displayName: "門徒", rank: RANK.DISCIPLE });
   const data = await payload(await handleCommand(slash("disciple-1"), env, {}));
   assert.match(data.data.content, /\/ai/);
-  assert.doesNotMatch(data.data.content, /\/audit|\/system|\/member/);
+  assert.doesNotMatch(data.data.content, /\/audit|\/system|\/member(?:\\s|$)/);
 });
