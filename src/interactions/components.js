@@ -10,7 +10,7 @@ export function masterAdminPanelComponents() {
   return [
     { type: 1, components: [button("add", "新增領民", "👤", 1), button("bind", "綁定 UID", "🔗", 1), button("promote", "晉升長老", "⬆️", 1)] },
     { type: 1, components: [button("view", "查看成員", "🔎"), button("demote", "調整為領民", "⬇️"), button("remove", "移出名冊", "🚪", 4)] },
-    { type: 1, components: [button("match-profiles", "專長刊登管理", "📋", 1), button("capabilities", "老祖能力建議", "🧠", 1), button("audit", "操作紀錄", "📝"), button("refresh", "重新整理", "🔄")] }
+    { type: 1, components: [button("match-profiles", "專長刊登管理", "📋", 1), button("capabilities", "老祖能力建議", "🧠", 1), button("command-permissions", "指令權限", "⚙️", 1), button("audit", "操作紀錄", "📝"), button("refresh", "重新整理", "🔄")] }
   ];
 }
 
