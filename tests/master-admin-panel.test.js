@@ -31,7 +31,7 @@ async function payload(response) { return JSON.parse(await response.text()); }
 
 test("宗主管理面板提供手機常用操作按鈕", () => {
   const ids = masterAdminPanelComponents().flatMap(row => row.components.map(item => item.custom_id));
-  for (const action of ["add", "bind", "promote", "demote", "view", "remove", "audit", "refresh"]) {
+  for (const action of ["add", "bind", "promote", "demote", "view", "remove", "match-profiles", "capabilities", "audit", "refresh"]) {
     assert.ok(ids.includes(`sidney:admin:v1:${action}`));
   }
 });
@@ -40,9 +40,15 @@ test("宗主管理面板採用一致的專業操作層級且保留既有 Custom 
   const rows = masterAdminPanelComponents();
   assert.deepEqual(rows[0].components.map(item => item.style), [1, 1, 1]);
   assert.deepEqual(rows[1].components.map(item => item.style), [2, 2, 4]);
-  assert.deepEqual(rows[2].components.map(item => item.style), [2, 2]);
   assert.equal(rows[0].components[1].custom_id, "sidney:admin:v1:bind");
   assert.equal(rows[1].components[2].custom_id, "sidney:admin:v1:remove");
+  const tools = rows[2].components.map(item => [item.custom_id, item.style]);
+  assert.deepEqual(tools, [
+    ["sidney:admin:v1:match-profiles", 1],
+    ["sidney:admin:v1:capabilities", 1],
+    ["sidney:admin:v1:audit", 2],
+    ["sidney:admin:v1:refresh", 2]
+  ]);
 });
 
 test("沒有合格候選人時輸出合法且停用的選單", () => {
