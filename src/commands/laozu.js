@@ -1,5 +1,5 @@
 import { askGemini } from "../../gemini.js";
-import { deferredResponse, editOriginalResponse, immediateResponse } from "../../discord.js";
+import { deferredResponse, editOriginalResponse, immediateResponse, sendUserDirectMessage } from "../../discord.js";
 import { formatError, getUser } from "../../utils.js";
 import { logError } from "../../logger.js";
 import { resolveActor } from "../sect/service.js";
@@ -11,9 +11,10 @@ import {
   findMatchProfiles,
   getMatchInvitation,
   publishMatchProfile,
-  resolveMatchInvitation,
+  respondToMatchInvitation,
   withdrawMatchProfile
 } from "../platform/laozu-matchmaking.js";
+import { matchInvitationComponents } from "../interactions/components.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -106,46 +107,67 @@ export async function handleLaozu(interaction, env, ctx) {
         const target = await getMember(env, subOption(interaction, "player"));
         if (!target || target.active === false) throw new Error("找不到這位仙遊者正式成員");
         const invitation = await createMatchInvitation(env, {
-          guildId, requester: member, target, need: subOption(interaction, "need")
+          guildId,
+          requester: member,
+          targetUserId: target.userId,
+          need: subOption(interaction, "need"),
+          message: subOption(interaction, "message")
         });
+        let notification = "老祖已私訊通知對方，可直接用按鈕回覆。";
+        try {
+          await sendUserDirectMessage(invitation.targetUserId, env.DISCORD_BOT_TOKEN, [
+            "## 🌙 老祖送來一封私人媒合邀請",
+            `邀請者：${invitation.requesterName}`,
+            `需求：${invitation.need}`,
+            invitation.message ? `留言：${invitation.message}` : null,
+            "是否接受，由你自己決定；老祖不會替任何一方作主。"
+          ].filter(Boolean).join("\n"), { components: matchInvitationComponents(invitation.id, invitation.guildId) });
+        } catch (error) {
+          logError("老祖媒合邀請私訊失敗", error);
+          notification = "對方目前無法接收私訊，請將邀請編號交給對方使用 `/laozu respond` 回覆。";
+        }
         return immediateResponse([
           "✅ 老祖已建立私人媒合邀請。",
           `邀請編號：\`${invitation.id}\``,
-          `受邀者：<@${invitation.targetId}>`,
+          `受邀者：<@${invitation.targetUserId}>`,
           `需求：${invitation.need}`,
-          "請將邀請編號交給對方；接受前不會視為媒合成立。"
+          notification,
+          "對方接受前，老祖不會把此邀請視為媒合成立。"
         ].join("\n"), true);
       }
 
       if (action === "respond") {
-        const invitation = await resolveMatchInvitation(env, {
+        const invitation = await respondToMatchInvitation(env, {
           guildId,
           invitationId: subOption(interaction, "invitation_id"),
-          targetId: user.id,
-          accept: subOption(interaction, "decision") === "accept"
+          responderId: user.id,
+          decision: subOption(interaction, "decision")
         });
+        const accepted = invitation.status === "accepted";
         return immediateResponse([
-          invitation.status === "accepted" ? "✅ 你已接受媒合邀請。" : "✅ 你已婉拒媒合邀請。",
+          accepted ? "✅ 你已接受媒合邀請。" : "✅ 你已婉拒媒合邀請。",
           `邀請編號：\`${invitation.id}\``,
           `邀請者：<@${invitation.requesterId}>`,
-          invitation.status === "accepted" ? "媒合已取得雙方同意，請自行禮貌聯絡。" : "老祖已記錄結果。"
+          accepted ? "媒合已取得雙方同意；請由雙方自行禮貌聯絡。" : "老祖已記錄結果，不會將此邀請視為媒合成立。"
         ].join("\n"), true);
       }
 
       if (action === "invitation") {
         const invitation = await getMatchInvitation(env, {
-          guildId, invitationId: subOption(interaction, "invitation_id"), viewerId: user.id
+          guildId,
+          invitationId: subOption(interaction, "invitation_id"),
+          viewerId: user.id
         });
-        if (!invitation) throw new Error("找不到這筆媒合邀請");
-        const labels = { pending: "等待回覆", accepted: "已接受", declined: "已婉拒" };
+        const labels = { pending: "等待受邀者回覆", accepted: "已接受", declined: "已婉拒" };
         return immediateResponse([
           "## 老祖私人媒合邀請",
           `邀請編號：\`${invitation.id}\``,
           `邀請者：<@${invitation.requesterId}>`,
-          `受邀者：<@${invitation.targetId}>`,
+          `受邀者：<@${invitation.targetUserId}>`,
           `需求：${invitation.need}`,
+          invitation.message ? `留言：${invitation.message}` : null,
           `狀態：${labels[invitation.status] || invitation.status}`
-        ].join("\n"), true);
+        ].filter(Boolean).join("\n"), true);
       }
 
       const matches = await findMatchProfiles(env, {
