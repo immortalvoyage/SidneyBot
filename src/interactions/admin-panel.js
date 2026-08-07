@@ -7,7 +7,7 @@ import { syncDiscordMemberRank } from "../sect/discord-roles.js";
 import { RANK, RANK_LABEL } from "../sect/constants.js";
 import { GAME_IDS } from "../platform/games/constants.js";
 import { approveGameBinding, getGameAccountByUser, requestGameBinding } from "../platform/games/service.js";
-import { listAudits } from "../sect/audit.js";
+import { listAudits, writeAudit } from "../sect/audit.js";
 import { notifyMember } from "../sect/notifications.js";
 import {
   adminCandidateSelect,
@@ -22,7 +22,7 @@ import {
 import { isMasterAdminChannel } from "../platform/channels.js";
 import { listCapabilitySuggestions, resolveCapabilitySuggestion } from "../platform/laozu-autonomy.js";
 import { getMatchProfile, listMatchProfiles, withdrawMatchProfile } from "../platform/laozu-matchmaking.js";
-import { commandPolicyList, selectCommandPolicy, updateCommandPolicy } from "./command-permissions.js";
+import { commandPolicyList, resetCommandPolicy, selectCommandPolicy, updateCommandPolicy } from "./command-permissions.js";
 
 const PREFIX = `${COMPONENT_IDS.ADMIN_PREFIX}:`;
 
@@ -71,7 +71,19 @@ export async function handleAdminInteraction(interaction, env, ctx) {
     }
     if (key === "command-permissions") return updateMessageResponse(await commandPolicyList(env));
     if (key === "command-select") return updateMessageResponse(await selectCommandPolicy(env, String(interaction.data?.values?.[0] || "")));
-    if (key.startsWith("command-roles:")) return updateMessageResponse(await updateCommandPolicy(env, key.slice("command-roles:".length), interaction.data?.values || []));
+    if (key.startsWith("command-roles:")) {
+      const commandName = key.slice("command-roles:".length);
+      const roles = interaction.data?.values || [];
+      const result = await updateCommandPolicy(env, commandName, roles);
+      await writeAudit(env, { action: "command.permissions.updated", actorId: actor.userId, targetId: commandName, details: { roles } });
+      return updateMessageResponse(result);
+    }
+    if (key.startsWith("command-reset:")) {
+      const commandName = key.slice("command-reset:".length);
+      const result = await resetCommandPolicy(env, commandName);
+      await writeAudit(env, { action: "command.permissions.reset", actorId: actor.userId, targetId: commandName });
+      return updateMessageResponse(result);
+    }
     if (key === "match-profiles") return matchProfilesResponse(interaction, env);
     if (key === "match-profile-select") return matchProfileDetailsResponse(interaction, env);
     if (key.startsWith("match-profile-remove:")) return removeMatchProfileResponse(interaction, env, key.slice("match-profile-remove:".length));
