@@ -4,7 +4,16 @@ import { getMember, listMembers } from "../sect/members.js";
 import { canUseAI } from "../sect/permissions.js";
 import { getPlayerState } from "../platform/player-state-storage.js";
 import { recordLaozuSignal } from "../platform/laozu-mood-state.js";
-import { findMatchProfiles, getMatchProfile } from "../platform/laozu-matchmaking.js";
+import {
+  confirmMatchProfileDraft,
+  discardMatchProfileDraft,
+  findMatchProfiles,
+  getMatchProfile,
+  getMatchProfileDraft,
+  parseMatchProfileDraft,
+  publishMatchProfile,
+  saveMatchProfileDraft
+} from "../platform/laozu-matchmaking.js";
 import { detectLaozuConversationIntent, recordCapabilitySuggestion } from "../platform/laozu-autonomy.js";
 
 const MAX_AGE_SECONDS = 300;
@@ -20,11 +29,66 @@ export function extractMentionQuestion(content, botUserId) {
 }
 
 function matchContext(matches) {
-  if (!matches.length) return "目前沒有符合且已同意公開的媒合資料。不要捏造人選。";
+  if (!matches.length) return "目前沒有符合且已同意公開的媒合資料。不要捏造人選；直接告訴玩家目前查不到已刊登且相符的人。";
   return [
-    "以下是程式依需求篩選後、再按老祖對成員好感度由高到低排列的最多三名人選。可以在聊天中自然介紹，但只能公開這裡列出的欄位：",
-    ...matches.map((item, index) => `${index + 1}. ${item.displayName}（Discord <@${item.userId}>）｜專長：${item.skills}｜方便時間：${item.availability}${item.note ? `｜備註：${item.note}` : ""}`)
+    "玩家正在找具有相關專長的人。你必須優先回答這個媒合結果，不要只閒聊帶過。以下是程式依需求篩選後、再按老祖對成員好感度由高到低排列的最多三名人選。只能公開這裡列出的欄位：",
+    ...matches.map((item, index) => `${index + 1}. ${item.displayName}（Discord <@${item.userId}>）｜專長：${item.skills}｜方便時間：${item.availability}${item.note ? `｜備註：${item.note}` : ""}`),
+    "請直接自然地介紹上述人選；若有一人以上，至少明確說出第一名。"
   ].join("\n");
+}
+
+async function processMatchListingChat(env, { guildId, member, question }) {
+  const draft = parseMatchProfileDraft(question);
+  const explicitConsent = /(確認刊登|確認公開|同意刊登|同意公開|幫我刊登|可以公開|公開吧)/u.test(question);
+  const simpleConfirm = /^(確認|同意|可以|好|好的|ok|OK)$/u.test(question.trim());
+  const cancel = /^(取消|不要刊登|取消刊登|不要公開)$/u.test(question.trim());
+
+  if (cancel && await getMatchProfileDraft(env, guildId, member.userId)) {
+    await discardMatchProfileDraft(env, guildId, member.userId);
+    return "✅ 已取消這次專長刊登草稿，沒有公開任何資料。";
+  }
+
+  if ((simpleConfirm || explicitConsent) && !draft) {
+    const profile = await confirmMatchProfileDraft(env, { guildId, member });
+    if (profile) {
+      return [
+        "✅ 已完成公開刊登，資料已實際寫入媒合資料庫。",
+        `專長：${profile.skills}`,
+        `方便時間：${profile.availability}`,
+        profile.note ? `備註：${profile.note}` : null,
+        "之後其他仙友詢問相符需求時，老祖可以依好感度優先介紹；可用 `/laozu withdraw` 隨時撤回。"
+      ].filter(Boolean).join("\n");
+    }
+  }
+
+  if (!draft) return null;
+
+  if (explicitConsent) {
+    const profile = await publishMatchProfile(env, {
+      guildId,
+      member,
+      skillList: draft.skillList,
+      availability: draft.availability,
+      note: draft.note,
+      consent: "AGREE"
+    });
+    return [
+      "✅ 已完成公開刊登，資料已實際寫入媒合資料庫。",
+      `專長：${profile.skills}`,
+      `方便時間：${profile.availability}`,
+      profile.note ? `備註：${profile.note}` : null
+    ].filter(Boolean).join("\n");
+  }
+
+  const saved = await saveMatchProfileDraft(env, { guildId, member, draft });
+  return [
+    "本座已整理成刊登草稿，但**尚未公開**：",
+    `專長：${saved.skillList.join("、")}`,
+    `方便時間：${saved.availability}`,
+    saved.note ? `備註：${saved.note}` : null,
+    "一個人可以刊登多項專長，用「、」或逗號分隔即可。",
+    "若內容正確，直接回覆「確認」；本座會在實際寫入成功後明確回覆「已完成公開刊登」。"
+  ].filter(Boolean).join("\n");
 }
 
 async function buildAutonomyContext(env, { guildId, userId, question }) {
@@ -44,14 +108,14 @@ async function buildAutonomyContext(env, { guildId, userId, question }) {
   if (intent.career) {
     const currentProfile = await getMatchProfile(env, guildId, userId);
     if (!currentProfile?.consent) {
-      blocks.push("玩家正在談換工作、兼職、副業、接案或類似機會，而且目前沒有公開媒合資料。請主動但不強迫地問她／他是否要讓你協助刊登可公開的能力、方便時間與備註；必須取得明確同意後才能公開。可以提醒目前也能用 /laozu offer 正式刊登。");
+      blocks.push("玩家正在談換工作、兼職、副業、接案或類似機會，而且目前沒有公開媒合資料。請主動但不強迫地問她／他是否要讓你協助刊登可公開的多項能力、方便時間與備註；必須取得明確同意後才能公開。玩家也可以直接用自然語句告訴你『我擅長 A、B，接案時間晚上』建立草稿，再回覆『確認』完成刊登。");
     }
   }
 
   if (intent.capabilityRequest) {
     const suggestion = await recordCapabilitySuggestion(env, { text: question, userId, guildId });
     if (suggestion) {
-      blocks.push("這段話已由程式登記為『老祖可能欠缺的能力／平台功能建議』，會送進宗主管理面板等待評估。不要宣稱功能已經存在或已經開發完成。若玩家只是詢問，仍先回答能做與不能做的部分。");
+      blocks.push("這段話已由程式登記為『老祖可能欠缺的能力／平台功能建議』，會送進宗主管理面板等待評估。相似需求會自動合併，不要宣稱功能已經存在或已經開發完成。若玩家只是詢問，仍先回答能做與不能做的部分。");
     }
   }
 
@@ -62,6 +126,16 @@ async function buildAutonomyContext(env, { guildId, userId, question }) {
     "【玩家原話】",
     question
   ].join("\n");
+}
+
+async function finishChat(env, { guildId, userId, question, answer, eventId }) {
+  await saveMemory(env, guildId, userId, question, answer);
+  await recordLaozuSignal(env, {
+    type: "meaningful_chat",
+    actorId: userId,
+    eventId: `mention-chat:${userId}:${new Date().toISOString().slice(0, 10)}`
+  });
+  await env.BOT_MEMORY?.put(`integration:discord-mention:event:${eventId}`, JSON.stringify({ receivedAt: new Date().toISOString() }), { expirationTtl: 86400 });
 }
 
 export async function handleDiscordMentionEvent(request, env) {
@@ -98,15 +172,16 @@ export async function handleDiscordMentionEvent(request, env) {
     loadProfile(env, guildId, userId),
     getPlayerState(env, userId)
   ]);
+
+  const directReply = await processMatchListingChat(env, { guildId, member, question });
+  if (directReply) {
+    await finishChat(env, { guildId, userId, question, answer: directReply, eventId });
+    return json({ ok: true, reply: directReply });
+  }
+
   const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question });
   const answer = await askGemini(enrichedQuestion, env, history, profile, member, playerState);
-  await saveMemory(env, guildId, userId, question, answer);
-  await recordLaozuSignal(env, {
-    type: "meaningful_chat",
-    actorId: userId,
-    eventId: `mention-chat:${userId}:${new Date().toISOString().slice(0, 10)}`
-  });
-  await env.BOT_MEMORY?.put(dedupeKey, JSON.stringify({ receivedAt: new Date().toISOString() }), { expirationTtl: 86400 });
+  await finishChat(env, { guildId, userId, question, answer, eventId });
   return json({ ok: true, reply: answer });
 }
 
