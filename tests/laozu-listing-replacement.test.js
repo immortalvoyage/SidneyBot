@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { processMatchListingChat } from "../src/integrations/discord-mentions.js";
-import { getMatchProfile } from "../src/platform/laozu-matchmaking.js";
+import {
+  confirmMatchProfileDraft,
+  getMatchProfile,
+  parseMatchProfileDraft,
+  publishMatchProfile,
+  saveMatchProfileDraft
+} from "../src/platform/laozu-matchmaking.js";
 
 function createEnv() {
   const values = new Map();
@@ -25,66 +30,66 @@ const member = {
   active: true
 };
 
-test("已有刊登時重新提供資料會先比較並等待確認更新", async () => {
+test("已有刊登時新草稿在確認前不覆蓋舊資料，確認後取代同一筆刊登", async () => {
   const env = createEnv();
 
-  const firstDraft = await processMatchListingChat(env, {
+  await publishMatchProfile(env, {
     guildId: "guild",
     member,
-    question: "我擅長程式設計、影片剪輯，方便時間：晚上"
+    skills: "程式設計、影片剪輯",
+    availability: "晚上",
+    consent: "AGREE"
   });
-  assert.match(firstDraft, /尚未公開/);
 
-  await processMatchListingChat(env, {
+  const replacement = parseMatchProfileDraft(
+    "我擅長Discord Bot、自動化，方便時間：週末"
+  );
+  assert.deepEqual(replacement.skillList, ["Discord Bot", "自動化"]);
+
+  await saveMatchProfileDraft(env, {
     guildId: "guild",
     member,
-    question: "確認"
+    draft: replacement
   });
-
-  const original = await getMatchProfile(env, "guild", member.userId);
-  assert.equal(original.skills, "程式設計、影片剪輯");
-  assert.equal(original.availability, "晚上");
-
-  const replacementDraft = await processMatchListingChat(env, {
-    guildId: "guild",
-    member,
-    question: "我擅長Discord Bot、自動化，方便時間：週末"
-  });
-
-  assert.match(replacementDraft, /取代現有刊登/);
-  assert.match(replacementDraft, /目前公開內容/);
-  assert.match(replacementDraft, /程式設計、影片剪輯/);
-  assert.match(replacementDraft, /準備更新為/);
-  assert.match(replacementDraft, /Discord Bot、自動化/);
 
   const beforeConfirm = await getMatchProfile(env, "guild", member.userId);
   assert.equal(beforeConfirm.skills, "程式設計、影片剪輯");
+  assert.equal(beforeConfirm.availability, "晚上");
 
-  const confirmed = await processMatchListingChat(env, {
+  const updated = await confirmMatchProfileDraft(env, {
     guildId: "guild",
-    member,
-    question: "確認更新"
+    member
   });
-  assert.match(confirmed, /舊刊登已由這筆新資料取代/);
 
-  const updated = await getMatchProfile(env, "guild", member.userId);
+  assert.equal(updated.userId, member.userId);
   assert.equal(updated.skills, "Discord Bot、自動化");
   assert.equal(updated.availability, "週末");
+
+  const stored = await getMatchProfile(env, "guild", member.userId);
+  assert.equal(stored.skills, "Discord Bot、自動化");
+  assert.equal(stored.availability, "週末");
 });
 
-test("重複提供完全相同資料不建立多餘更新", async () => {
+test("同一玩家重複刊登仍只覆蓋固定的單一 profile key", async () => {
   const env = createEnv();
-  await processMatchListingChat(env, {
-    guildId: "guild",
-    member,
-    question: "我擅長程式設計，方便時間：隨時"
-  });
-  await processMatchListingChat(env, { guildId: "guild", member, question: "確認" });
 
-  const reply = await processMatchListingChat(env, {
+  await publishMatchProfile(env, {
     guildId: "guild",
     member,
-    question: "我擅長程式設計，方便時間：隨時"
+    skills: "程式設計",
+    availability: "隨時",
+    consent: "AGREE"
   });
-  assert.match(reply, /內容與這次提供的資料相同/);
-}
+
+  await publishMatchProfile(env, {
+    guildId: "guild",
+    member,
+    skills: "Discord Bot、自動化",
+    availability: "週末",
+    consent: "AGREE"
+  });
+
+  const stored = await getMatchProfile(env, "guild", member.userId);
+  assert.equal(stored.skills, "Discord Bot、自動化");
+  assert.equal(stored.availability, "週末");
+});
