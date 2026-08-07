@@ -22,12 +22,14 @@ import {
   uidReviewComponents
 } from "./components.js";
 import { handleAdminInteraction, isAdminInteraction } from "./admin-panel.js";
+import { handleLaozuMemoryInteraction, isLaozuMemoryInteraction } from "./laozu-memory.js";
 import { handleRosterInteraction, isRosterInteraction } from "./roster.js";
 
 export async function handleButton(interaction, env, ctx) {
   const customId = String(interaction.data?.custom_id || "");
   if (isRosterInteraction(customId)) return handleRosterInteraction(interaction, env);
   if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env, ctx);
+  if (isLaozuMemoryInteraction(customId)) return handleLaozuMemoryInteraction(interaction, env);
   if (customId === COMPONENT_IDS.DAILY_GREETING) {
     return handleDailyGreeting(interaction, env);
   }

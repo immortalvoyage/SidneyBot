@@ -12,6 +12,7 @@ import {
   recordSharedLaozuEvent,
   setLaozuMemorySharing
 } from "../src/platform/laozu-shared-events.js";
+import { handleLaozuMemoryInteraction } from "../src/interactions/laozu-memory.js";
 
 function memoryKv() {
   const values = new Map();
@@ -22,9 +23,20 @@ function memoryKv() {
       return options?.type === "json" ? JSON.parse(value) : value;
     },
     async put(key, value) { values.set(key, value); },
-    async delete(key) { values.delete(key); }
+    async delete(key) { values.delete(key); },
+    async list({ prefix }) { return { keys: [...values.keys()].filter(key => key.startsWith(prefix)).map(name => ({ name })) }; }
   };
 }
+
+function memoryInteraction(action, userId = "111111") {
+  return {
+    guild_id: "999999",
+    member: { user: { id: userId, username: userId } },
+    data: { custom_id: `sidney:laozu-memory:v1:${action}` }
+  };
+}
+
+async function responseData(response) { return JSON.parse(await response.text()).data; }
 
 test("extracts mentioned players but excludes Laozu", () => {
   assert.deepEqual(
@@ -54,6 +66,30 @@ test("deletes only the requester's own KV and archived events", async () => {
   assert.equal(sent.payload.action, "delete_user");
   assert.equal(sent.payload.requesterId, "111111");
   assert.equal((await loadSharedLaozuEvents(env, { guildId: "999999", userIds: ["111111"] })).length, 0);
+});
+
+test("player memory panel toggles sharing and requires a second delete confirmation", async () => {
+  const env = { BOT_MEMORY: memoryKv() };
+  await recordSharedLaozuEvent(env, { guildId: "999999", actorId: "111111", participantIds: [], eventId: "owned-1", text: "我的紀錄" });
+  const off = await responseData(await handleLaozuMemoryInteraction(memoryInteraction("sharing:off"), env));
+  assert.match(off.content, /已關閉對外共享/);
+  assert.match(off.content, /關閉/);
+  const request = await responseData(await handleLaozuMemoryInteraction(memoryInteraction("delete-request"), env));
+  assert.match(request.content, /確認刪除/);
+  assert.equal(request.components[0].components[0].custom_id, "sidney:laozu-memory:v1:delete-confirm");
+  assert.equal((await loadSharedLaozuEvents(env, { guildId: "999999", userIds: ["111111"] })).length, 1);
+  const deleted = await responseData(await handleLaozuMemoryInteraction(memoryInteraction("delete-confirm"), env));
+  assert.match(deleted.content, /KV 1 筆/);
+  assert.equal((await loadSharedLaozuEvents(env, { guildId: "999999", userIds: ["111111"] })).length, 0);
+});
+
+test("player memory view only queries the requesting player's identity scope", async () => {
+  const env = { BOT_MEMORY: memoryKv() };
+  await recordSharedLaozuEvent(env, { guildId: "999999", actorId: "111111", participantIds: [], eventId: "mine", text: "只顯示我的事件" });
+  await recordSharedLaozuEvent(env, { guildId: "999999", actorId: "222222", participantIds: [], eventId: "other", text: "不可顯示他人事件" });
+  const view = await responseData(await handleLaozuMemoryInteraction(memoryInteraction("view"), env));
+  assert.match(view.content, /只顯示我的事件/);
+  assert.doesNotMatch(view.content, /不可顯示他人事件/);
 });
 
 test("shares a public event with actor and mentioned player", async () => {

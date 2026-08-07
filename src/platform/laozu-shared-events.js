@@ -185,6 +185,19 @@ export async function deleteOwnLaozuEvents(env, { guildId, userId } = {}, fetchI
   return { deleted, archived: true };
 }
 
+export async function listLaozuMemoryPrivacyStats(env, { guildId } = {}) {
+  const cleanGuildId = cleanSnowflake(guildId);
+  if (!env?.BOT_MEMORY?.list || !cleanGuildId) return { indexedUsers: 0, sharingDisabled: 0 };
+  const indexes = await env.BOT_MEMORY.list({ prefix: `laozu:shared-events:index:${cleanGuildId}:` });
+  const privacy = await env.BOT_MEMORY.list({ prefix: `laozu:shared-events:privacy:${cleanGuildId}:` });
+  let sharingDisabled = 0;
+  for (const key of privacy.keys || []) {
+    const saved = await readJson(env.BOT_MEMORY, key.name, null);
+    if (saved?.sharePublicEvents === false) sharingDisabled += 1;
+  }
+  return { indexedUsers: (indexes.keys || []).length, sharingDisabled };
+}
+
 export async function recordSharedLaozuEvent(env, input) {
   const event = normalizeEvent(input);
   if (!env?.BOT_MEMORY || !event) return null;

@@ -23,6 +23,7 @@ import { isMasterAdminChannel } from "../platform/channels.js";
 import { listCapabilitySuggestions, resolveCapabilitySuggestion } from "../platform/laozu-autonomy.js";
 import { getMatchProfile, listMatchProfiles, withdrawMatchProfile } from "../platform/laozu-matchmaking.js";
 import { commandPolicyList, resetCommandPolicy, selectCommandPolicy, updateCommandPolicy } from "./command-permissions.js";
+import { listLaozuMemoryPrivacyStats } from "../platform/laozu-shared-events.js";
 
 const PREFIX = `${COMPONENT_IDS.ADMIN_PREFIX}:`;
 
@@ -85,6 +86,18 @@ export async function handleAdminInteraction(interaction, env, ctx) {
       return updateMessageResponse(result);
     }
     if (key === "match-profiles") return matchProfilesResponse(interaction, env);
+    if (key === "memory-privacy") {
+      const stats = await listLaozuMemoryPrivacyStats(env, { guildId: interaction.guild_id });
+      return updateMessageResponse({
+        content: [
+          "## 🔐 老祖記憶權限統計",
+          `已有事件索引的玩家：**${stats.indexedUsers}**`,
+          `已關閉對外共享：**${stats.sharingDisabled}**`,
+          "宗主只能檢視統計與權限狀態，不可從此面板讀取或刪除玩家的私人記憶。"
+        ].join("\n"),
+        components: [{ type: 1, components: [{ type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:refresh`, label: "返回管理中心", emoji: { name: "↩️" } }] }]
+      });
+    }
     if (key === "match-profile-select") return matchProfileDetailsResponse(interaction, env);
     if (key.startsWith("match-profile-remove:")) return removeMatchProfileResponse(interaction, env, key.slice("match-profile-remove:".length));
     if (key === "capabilities") return capabilityQueueResponse(env);

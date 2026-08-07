@@ -2,6 +2,7 @@ export const COMPONENT_IDS = Object.freeze({
   DAILY_GREETING: "sidney:greeting:v1",
   REVIEW_PREFIX: "sidney:application-review:v1",
   UID_REVIEW_PREFIX: "sidney:uid-review:v1",
+  MEMORY_PREFIX: "sidney:laozu-memory:v1",
   ADMIN_PREFIX: "sidney:admin:v1"
 });
 
@@ -10,8 +11,31 @@ export function masterAdminPanelComponents() {
   return [
     { type: 1, components: [button("add", "新增領民", "👤", 1), button("bind", "綁定 UID", "🔗", 1), button("promote", "晉升長老", "⬆️", 1)] },
     { type: 1, components: [button("view", "查看成員", "🔎"), button("demote", "調整為領民", "⬇️"), button("remove", "移出名冊", "🚪", 4)] },
-    { type: 1, components: [button("match-profiles", "專長刊登管理", "📋", 1), button("capabilities", "老祖能力建議", "🧠", 1), button("command-permissions", "指令權限", "⚙️", 1), button("audit", "操作紀錄", "📝"), button("refresh", "重新整理", "🔄")] }
+    { type: 1, components: [button("match-profiles", "專長刊登管理", "📋", 1), button("memory-privacy", "記憶權限", "🔐", 1), button("capabilities", "老祖能力建議", "🧠", 1), button("command-permissions", "指令權限", "⚙️", 1), button("audit", "操作紀錄", "📝")] },
+    { type: 1, components: [button("refresh", "重新整理", "🔄")] }
   ];
+}
+
+export function laozuMemoryComponents(sharePublicEvents = true) {
+  const prefix = COMPONENT_IDS.MEMORY_PREFIX;
+  return [
+    { type: 1, components: [
+      { type: 2, style: 1, custom_id: `${prefix}:view`, label: "查閱我的紀錄", emoji: { name: "📖" } },
+      { type: 2, style: sharePublicEvents ? 2 : 3, custom_id: `${prefix}:sharing:${sharePublicEvents ? "off" : "on"}`, label: sharePublicEvents ? "關閉對外共享" : "開啟對外共享", emoji: { name: sharePublicEvents ? "🔒" : "🔓" } }
+    ] },
+    { type: 1, components: [
+      { type: 2, style: 4, custom_id: `${prefix}:delete-request`, label: "刪除我的事件記憶", emoji: { name: "🗑️" } },
+      { type: 2, style: 2, custom_id: `${prefix}:refresh`, label: "重新整理", emoji: { name: "🔄" } }
+    ] }
+  ];
+}
+
+export function laozuMemoryDeleteConfirmComponents() {
+  const prefix = COMPONENT_IDS.MEMORY_PREFIX;
+  return [{ type: 1, components: [
+    { type: 2, style: 4, custom_id: `${prefix}:delete-confirm`, label: "確認永久刪除", emoji: { name: "⚠️" } },
+    { type: 2, style: 2, custom_id: `${prefix}:refresh`, label: "取消", emoji: { name: "↩️" } }
+  ] }];
 }
 
 export function capabilitySuggestionComponents(items) {

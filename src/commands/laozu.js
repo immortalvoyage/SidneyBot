@@ -14,6 +14,8 @@ import {
   resolveMatchInvitation,
   withdrawMatchProfile
 } from "../platform/laozu-matchmaking.js";
+import { getLaozuMemoryPrivacy } from "../platform/laozu-shared-events.js";
+import { laozuMemoryComponents } from "../interactions/components.js";
 
 function subcommand(interaction) {
   return interaction?.data?.options?.[0] || null;
@@ -70,6 +72,16 @@ async function execute(interaction, env) {
 
 export async function handleLaozu(interaction, env, ctx) {
   const action = subcommand(interaction)?.name;
+  if (action === "memory") {
+    const user = getUser(interaction);
+    const privacy = await getLaozuMemoryPrivacy(env, { guildId: interaction.guild_id || "dm", userId: user.id });
+    return immediateResponse([
+      "## ☯ 老祖記憶管理",
+      "這裡只管理你本人對老祖說過的事件記憶。",
+      `對外共享：**${privacy.sharePublicEvents ? "開啟" : "關閉"}**`,
+      "關閉後，其他玩家與老祖交談時不會取用你的公開事件；你仍可查閱自己的紀錄。"
+    ].join("\n"), true, laozuMemoryComponents(privacy.sharePublicEvents));
+  }
   if (["offer", "match", "withdraw", "invite", "respond", "invitation"].includes(action)) {
     try {
       const user = getUser(interaction);

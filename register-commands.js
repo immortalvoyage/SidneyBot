@@ -240,6 +240,11 @@ export const ENGLISH_COMMANDS = [
     description: "老祖互動、成員媒合與宗門處置",
     options: [
       {
+        name: "memory",
+        description: "私密查閱、共享或刪除自己的老祖事件記憶",
+        type: 1
+      },
+      {
         name: "offer",
         description: "自願公開可協助的專長，供老祖媒合",
         type: 1,

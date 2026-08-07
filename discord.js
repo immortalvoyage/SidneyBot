@@ -9,13 +9,14 @@ function json(data, status = 200) {
   });
 }
 
-export function immediateResponse(content, ephemeral = false) {
+export function immediateResponse(content, ephemeral = false, components = []) {
   return json({
     type: 4,
     data: {
       content: String(content || ""),
       flags: ephemeral ? 64 : 0,
-      allowed_mentions: { parse: [] }
+      allowed_mentions: { parse: [] },
+      components: Array.isArray(components) ? components : []
     }
   });
 }
