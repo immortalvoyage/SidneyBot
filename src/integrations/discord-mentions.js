@@ -18,6 +18,7 @@ import {
   withdrawMatchProfile
 } from "../platform/laozu-matchmaking.js";
 import { detectLaozuConversationIntent, recordCapabilitySuggestion } from "../platform/laozu-autonomy.js";
+import { laozuListingConfirmComponents } from "../interactions/components.js";
 import {
   extractMentionedUserIds,
   formatSharedEventContext,
@@ -262,7 +263,7 @@ export async function processMatchListingChat(env, { guildId, member, question }
       `方便時間：${saved.availability}`,
       saved.note ? `備註：${saved.note}` : "備註：無",
       "",
-      "若確定要取代，直接回覆「確認更新」；若不改，回覆「取消更新」。"
+      "請使用下方按鈕確認是否取代現有刊登。文字「確認更新／取消更新」仍可作為備援。"
     ].join("\n");
   }
 
@@ -432,7 +433,12 @@ export async function handleDiscordMentionEvent(request, env) {
     const directReply = await processMatchListingChat(env, { guildId, member, question });
     if (directReply) {
       await finishChat(env, { guildId, userId, question, answer: directReply, eventId });
-      return json({ ok: true, reply: directReply });
+      const pending = await getMatchProfileDraft(env, guildId, userId);
+      return json({
+        ok: true,
+        reply: directReply,
+        components: pending ? laozuListingConfirmComponents(userId) : []
+      });
     }
   }
 
