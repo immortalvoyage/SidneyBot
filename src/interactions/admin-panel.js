@@ -9,8 +9,9 @@ import { GAME_IDS } from "../platform/games/constants.js";
 import { approveGameBinding, getGameAccountByUser, requestGameBinding } from "../platform/games/service.js";
 import { listAudits } from "../sect/audit.js";
 import { notifyMember } from "../sect/notifications.js";
-import { adminCandidateSelect, adminRemoveConfirmComponents, adminUidModal, COMPONENT_IDS, masterAdminPanelComponents } from "./components.js";
+import { adminCandidateSelect, adminRemoveConfirmComponents, adminUidModal, capabilitySuggestionComponents, COMPONENT_IDS, masterAdminPanelComponents } from "./components.js";
 import { isMasterAdminChannel } from "../platform/channels.js";
+import { listCapabilitySuggestions, resolveCapabilitySuggestion } from "../platform/laozu-autonomy.js";
 
 const PREFIX = `${COMPONENT_IDS.ADMIN_PREFIX}:`;
 
@@ -56,6 +57,11 @@ export async function handleAdminInteraction(interaction, env, ctx) {
     if (key.startsWith("candidate-page:")) {
       const [, action, page] = key.split(":");
       return candidateResponse(interaction, env, action, page, true);
+    }
+    if (key === "capabilities") return capabilityQueueResponse(env);
+    if (key.startsWith("capability:")) {
+      const [, decision, id] = key.split(":");
+      return resolveCapabilityResponse(env, id, decision);
     }
     if (key === "audit") return recentAudit(env);
     if (key === "refresh") return updateMessageResponse({ content: "## ☯ 仙遊者｜宗主管理中心\n面板已重新整理。所有操作都會驗證宗主身分並留下紀錄。", components: masterAdminPanelComponents() });
@@ -316,6 +322,33 @@ async function memberDetails(env, member) {
 async function recentAudit(env) {
   const rows = await listAudits(env, 10);
   return immediateResponse(["## 最近 10 筆操作紀錄", ...(rows.length ? rows.map(row => `• ${row.createdAt}｜${row.action}｜目標 ${row.targetId || "-"}`) : ["目前沒有操作紀錄。"])].join("\n"), true);
+}
+
+async function capabilityQueueData(env) {
+  const items = await listCapabilitySuggestions(env, 5);
+  return {
+    content: [
+      "## 🧠 老祖｜能力建議評估",
+      "老祖會把聊天中判斷為『目前平台可能欠缺的能力』列在這裡。拒絕後會進入黑名單，不再重新加入同一筆需求。",
+      "",
+      ...(items.length ? items.map((item, index) => `${index + 1}. **${item.text}**\n   出現 ${item.count || 1} 次｜最後：${item.lastSeenAt || "-"}`) : ["目前沒有待評估能力建議。"])
+    ].join("\n"),
+    components: capabilitySuggestionComponents(items)
+  };
+}
+
+async function capabilityQueueResponse(env) {
+  return updateMessageResponse(await capabilityQueueData(env));
+}
+
+async function resolveCapabilityResponse(env, id, decision) {
+  const resolved = await resolveCapabilitySuggestion(env, id, decision);
+  const data = await capabilityQueueData(env);
+  const label = decision === "developed" ? "已標記為已開發" : "已拒絕並加入黑名單";
+  return updateMessageResponse({
+    content: `✅ ${label}：${resolved.text}\n\n${data.content}`,
+    components: data.components
+  });
 }
 
 function actionLabel(action) {
