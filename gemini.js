@@ -330,6 +330,7 @@ async function requestModel({
   profile,
   member,
   playerState,
+  sectContext,
   env,
   maxRetries,
   timeoutMs,
@@ -341,7 +342,8 @@ async function requestModel({
         member || buildTemporaryMember(profile),
 
       profile,
-      playerState
+      playerState,
+      sectContext
     });
 
   const contents =
@@ -668,7 +670,8 @@ async function requestModel({
  *   history,
  *   profile,
  *   member,
- *   playerState
+ *   playerState,
+ *   options
  * )
  */
 export async function askGemini(
@@ -677,7 +680,8 @@ export async function askGemini(
   history = [],
   profile = {},
   member = null,
-  playerState = null
+  playerState = null,
+  options = {}
 ) {
   if (!env?.GEMINI_API_KEY) {
     throw new GeminiApiError(
@@ -738,6 +742,7 @@ export async function askGemini(
           profile,
           member,
           playerState,
+          sectContext: options?.sectContext || "",
           env,
           maxRetries,
           timeoutMs,

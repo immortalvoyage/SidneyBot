@@ -24,7 +24,7 @@ function okResponse(answer = "測試回答") {
   };
 }
 
-async function capturePrompt(member, playerState = null) {
+async function capturePrompt(member, playerState = null, options = {}) {
   const originalFetch = globalThis.fetch;
   let requestBody = null;
 
@@ -44,7 +44,8 @@ async function capturePrompt(member, playerState = null) {
       [],
       {},
       member,
-      playerState
+      playerState,
+      options
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -82,6 +83,17 @@ test("萬象錄關係與請安摘要會傳入老祖 Prompt", async () => {
   assert.match(prompt, /信任：67/);
   assert.match(prompt, /目前連續請安：7 天/);
   assert.match(prompt, /不得自行更改分數/);
+});
+
+test("名冊上下文禁止依 mention 猜測或編故事圓場", async () => {
+  const prompt = await capturePrompt(
+    { userId: "111", displayName: "凜冬皓月", rank: "master", active: true },
+    null,
+    { sectContext: "正式名冊共 2 人：\n- Discord ID 111｜名稱 凜冬皓月｜身分 宗主\n- Discord ID 222｜名稱 沈慕白｜身分 門徒" }
+  );
+  assert.match(prompt, /Discord mention/);
+  assert.match(prompt, /數字 ID 與名冊逐字比對/);
+  assert.match(prompt, /不得編造對方離宗、遊歷、閉關、乾脆、改名或被遺忘/);
 });
 
 test("沒有萬象錄資料時禁止老祖猜測關係狀態", async () => {

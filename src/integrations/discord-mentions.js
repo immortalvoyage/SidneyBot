@@ -27,6 +27,39 @@ import {
 
 const MAX_AGE_SECONDS = 300;
 
+const RANK_NAMES = {
+  master: "宗主",
+  elder: "長老",
+  disciple: "門徒",
+  resident: "領民",
+  pending: "待審核者",
+  outsider: "陌生人"
+};
+
+export function needsSectRosterContext(question, mentionedUserIds = []) {
+  const text = String(question || "");
+  return mentionedUserIds.length > 0
+    || /(仙遊者|宗門|名冊|成員|玩家|宗主|長老|門徒|領民).{0,20}(誰|哪些|有沒有|是否|認識|知道|叫什麼|是誰|在不在)/u.test(text)
+    || /(誰|哪些|有沒有|是否|認識|知道|叫什麼|是誰|在不在).{0,20}(仙遊者|宗門|名冊|成員|玩家|宗主|長老|門徒|領民)/u.test(text);
+}
+
+export function formatSectRosterContext(members = []) {
+  const active = members.filter(item => item && item.active !== false);
+  if (!active.length) {
+    return "正式名冊目前沒有可用成員資料。這代表本次查詢查無資料，不代表任何人已離宗或外出。";
+  }
+  return [
+    `正式名冊共 ${active.length} 人；以下資料來自系統即時查詢：`,
+    ...active.slice(0, 200).map(item => {
+      const id = String(item.userId || "").trim();
+      const name = String(item.displayName || item.username || "未記名仙友").trim();
+      return `- Discord ID ${id}｜名稱 ${name}｜身分 ${RANK_NAMES[item.rank] || item.rank || "未知"}`;
+    }),
+    active.length > 200 ? `另有 ${active.length - 200} 人未載入本次上下文；不得猜測其資料。` : "",
+    "回答成員身分時，以 Discord ID 精確比對；不得把目前說話者的 ID 套到其他 mention。"
+  ].filter(Boolean).join("\n");
+}
+
 export function extractMentionQuestion(content, botUserId) {
   const id = String(botUserId || "").trim();
   if (!/^\d+$/.test(id)) return "";
@@ -313,6 +346,9 @@ export async function handleDiscordMentionEvent(request, env) {
   ]);
 
   const mentionedUserIds = extractMentionedUserIds(payload.content, botUserId).filter(id => id !== userId);
+  const sectContext = needsSectRosterContext(question, mentionedUserIds)
+    ? formatSectRosterContext(await listMembers(env))
+    : "";
   const sharedEvents = guildId === "dm" ? [] : await loadSharedLaozuEvents(env, {
     guildId,
     userIds: [userId, ...mentionedUserIds],
@@ -346,7 +382,7 @@ export async function handleDiscordMentionEvent(request, env) {
   }
 
   const enrichedQuestion = await buildAutonomyContext(env, { guildId, userId, question, sharedEvents });
-  const answer = await askGemini(enrichedQuestion, env, history, profile, member, playerState);
+  const answer = await askGemini(enrichedQuestion, env, history, profile, member, playerState, { sectContext });
   await finishChat(env, { guildId, userId, question, answer, eventId });
   return json({ ok: true, reply: answer });
 }
