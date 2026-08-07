@@ -43,11 +43,16 @@ const healthServer = createServer((request, response) => {
 
 healthServer.listen(healthPort, "0.0.0.0", () => console.log(`Gateway health check listening on ${healthPort}`));
 
-async function sendDiscord(channelId, content, replyTo) {
+async function sendDiscord(channelId, content, replyTo, components = []) {
   const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: "POST",
     headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ content: String(content).slice(0, 2000), message_reference: replyTo ? { message_id: replyTo } : undefined, allowed_mentions: { parse: [] } })
+    body: JSON.stringify({
+      content: String(content).slice(0, 2000),
+      components: Array.isArray(components) ? components : [],
+      message_reference: replyTo ? { message_id: replyTo } : undefined,
+      allowed_mentions: { parse: [] }
+    })
   });
   if (!response.ok) throw new Error(`Discord message HTTP ${response.status}`);
 }
@@ -71,7 +76,7 @@ async function handleMessage(message) {
   try {
     const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "X-Sidney-Timestamp": timestamp, "X-Sidney-Event-Id": eventId, "X-Sidney-Signature": signature }, body, signal: AbortSignal.timeout(55000) });
     const result = await response.json();
-    await sendDiscord(message.channel_id, result.reply || "老祖剛才走神了，再喚我一次可好？", message.id);
+    await sendDiscord(message.channel_id, result.reply || "老祖剛才走神了，再喚我一次可好？", message.id, result.components);
   } catch (error) {
     lastError = String(error?.message || error).slice(0, 300);
     console.error("@老祖處理失敗", error);

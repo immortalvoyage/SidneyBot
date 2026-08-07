@@ -3,8 +3,18 @@ export const COMPONENT_IDS = Object.freeze({
   REVIEW_PREFIX: "sidney:application-review:v1",
   UID_REVIEW_PREFIX: "sidney:uid-review:v1",
   MEMORY_PREFIX: "sidney:laozu-memory:v1",
+  LISTING_PREFIX: "sidney:laozu-listing:v1",
   ADMIN_PREFIX: "sidney:admin:v1"
 });
+
+export function laozuListingConfirmComponents(userId) {
+  const ownerId = String(userId || "").trim();
+  const prefix = COMPONENT_IDS.LISTING_PREFIX;
+  return [{ type: 1, components: [
+    { type: 2, style: 3, custom_id: `${prefix}:confirm:${ownerId}`, label: "確認更新", emoji: { name: "✅" } },
+    { type: 2, style: 2, custom_id: `${prefix}:cancel:${ownerId}`, label: "取消更新", emoji: { name: "✖️" } }
+  ] }];
+}
 
 export function masterAdminPanelComponents() {
   const button = (action, label, emoji, style = 2) => ({ type: 2, style, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:${action}`, label, emoji: { name: emoji } });

@@ -8,6 +8,7 @@ import {
   needsSectRosterContext,
   processMatchListingChat
 } from "../src/integrations/discord-mentions.js";
+import { parseMatchProfileDraft } from "../src/platform/laozu-matchmaking.js";
 
 test("extracts normal and nickname Discord mentions", () => {
   assert.equal(extractMentionQuestion("<@123456789> 妳在嗎？", "123456789"), "妳在嗎？");
@@ -74,4 +75,9 @@ test("沒有刊登草稿時一般 OK 不得誤入專長確認流程", async () =
     question: "OK"
   });
   assert.equal(reply, null);
+});
+
+test("詢問老祖的學習能力不會建立專長草稿", () => {
+  assert.equal(parseMatchProfileDraft("請問一下你目前還有學習的能力嗎？"), null);
+  assert.equal(parseMatchProfileDraft("我的能力是程式設計")?.skills, "程式設計");
 });

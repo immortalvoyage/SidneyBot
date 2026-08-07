@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   applicationReviewComponents,
   dailyGreetingComponents,
+  laozuListingConfirmComponents,
   parseApplicationReviewId,
   parseUidReviewId,
   uidReviewComponents
@@ -13,6 +14,8 @@ import { createApplication, reviewApplication } from "../src/sect/applications.j
 import { getApplication } from "../src/sect/applications.js";
 import { getMember } from "../src/sect/members.js";
 import { getPlayerState } from "../src/platform/player-state-storage.js";
+import { getMatchProfile, saveMatchProfileDraft } from "../src/platform/laozu-matchmaking.js";
+import { upsertMember } from "../src/sect/members.js";
 
 function createEnv() {
   const values = new Map();
@@ -49,6 +52,45 @@ test("請安與入宗審核元件使用 Discord 原生按鈕", () => {
     { decision: "approve", userId: "200000000000000002" }
   );
   assert.equal(uidReviewComponents("200000000000000002", true)[0].components[1].disabled, true);
+});
+
+test("專長更新草稿提供確認與取消按鈕", () => {
+  const buttons = laozuListingConfirmComponents("200000000000000002")[0].components;
+  assert.deepEqual(buttons.map(item => item.label), ["確認更新", "取消更新"]);
+  assert.deepEqual(buttons.map(item => item.style), [3, 2]);
+});
+
+test("專長更新按鈕只允許本人確認並實際寫入", async () => {
+  const env = createEnv();
+  const member = await upsertMember(env, {
+    userId: "200000000000000002",
+    username: "member",
+    displayName: "一般成員",
+    rank: "disciple"
+  });
+  await saveMatchProfileDraft(env, {
+    guildId: "guild-1",
+    member,
+    draft: { skillList: ["Discord Bot"], availability: "週末", note: "可測試" }
+  });
+
+  const denied = await payload(await handleButton({
+    guild_id: "guild-1",
+    member: { user: { id: "300000000000000003" } },
+    data: { custom_id: "sidney:laozu-listing:v1:confirm:200000000000000002" }
+  }, env));
+  assert.equal(denied.data.flags, 64);
+  assert.equal(await getMatchProfile(env, "guild-1", member.userId), null);
+
+  const confirmed = await payload(await handleButton({
+    guild_id: "guild-1",
+    member: { user: { id: member.userId } },
+    data: { custom_id: "sidney:laozu-listing:v1:confirm:200000000000000002" }
+  }, env));
+  assert.equal(confirmed.type, 7);
+  assert.deepEqual(confirmed.data.components, []);
+  assert.match(confirmed.data.content, /已確認更新/);
+  assert.equal((await getMatchProfile(env, "guild-1", member.userId)).skills, "Discord Bot");
 });
 
 test("非審核者點擊按鈕只收到私人拒絕訊息", async () => {

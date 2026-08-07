@@ -79,13 +79,14 @@ export function parseMatchProfileDraft(text) {
     || /(專長|擅長).{0,30}(的人|仙友|玩家|成員)/u.test(value);
   if (thirdPartySearch) return null;
 
-  const skillMatch = value.match(/(?:我(?:很)?擅長|我的專長(?:是|有)?|我的能力(?:是|有)?|我可以協助|我可協助|我會做|我會|專長(?:是|有)?|能力(?:是|有)?)[：:\s]*([^。；;\n]{2,220})/u)
+  const skillMatch = value.match(/(?:我(?:很)?擅長|我的專長(?:是|有)?|我的能力(?:是|有)?|我可以協助|我可協助|我會做|我會|專長(?:是|有|：|:)|能力(?:是|有|：|:))[：:\s]*([^。；;\n]{2,220})/u)
     || value.match(/我(?:最近)?想找[：:\s]*([^。；;\n]{2,120}?)(?:相關的?)?(?:兼職|副業|接案|工作)(?:機會)?/u);
   if (!skillMatch) return null;
 
   let skillsText = skillMatch[1]
     .replace(/(?:，|,)?\s*(?:接案時間|方便時間|可協助時間|有空時間|時間)[：:].*$/u, "")
     .trim();
+  if (/^(?:什麼|哪些|多少)|(?:什麼|哪些|多少|嗎|呢)[？?]?$/u.test(skillsText)) return null;
   const skillList = normalizeSkills(skillsText);
   if (!skillList.length) return null;
 
@@ -101,7 +102,7 @@ export function parseMatchProfileDraft(text) {
 
 export function parseMatchProfilePatch(text) {
   const value = clean(text, 1000);
-  const skillMatch = value.match(/(?:專長|能力)[：:\s]*(.+?)(?=(?:，|,)?\s*(?:接案時間|方便時間|可協助時間|有空時間|備註|說明)[：:]|$)/u);
+  const skillMatch = value.match(/(?:專長|能力)(?:是|有|[：:])\s*(.+?)(?=(?:，|,)?\s*(?:接案時間|方便時間|可協助時間|有空時間|備註|說明)[：:]|$)/u);
   const availabilityMatch = value.match(/(?:接案時間|方便時間|可協助時間|有空時間)[：:\s]*([^。；;\n]{1,120})/u);
   const noteMatch = value.match(/(?:備註|說明)[：:\s]*([^。；;\n]{0,220})/u);
   const skillList = skillMatch ? normalizeSkills(skillMatch[1]) : null;

@@ -63,6 +63,10 @@ test("一般成員可只修改自己指定的刊登欄位", async () => {
   assert.equal(updated.note, "請先私訊");
 });
 
+test("詢問老祖是否還有學習能力不會被解析成專長", () => {
+  assert.equal(parseMatchProfilePatch("請問一下你目前還有學習的能力嗎？").skillList, null);
+});
+
 test("一般成員可刪除自己的刊登", async () => {
   const storage = env();
   await publishMatchProfile(storage, {

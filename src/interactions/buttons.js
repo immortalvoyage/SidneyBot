@@ -24,12 +24,27 @@ import {
 import { handleAdminInteraction, isAdminInteraction } from "./admin-panel.js";
 import { handleLaozuMemoryInteraction, isLaozuMemoryInteraction } from "./laozu-memory.js";
 import { handleRosterInteraction, isRosterInteraction } from "./roster.js";
+import {
+  confirmMatchProfileDraft,
+  discardMatchProfileDraft,
+  getMatchProfileDraft
+} from "../platform/laozu-matchmaking.js";
+
+function parseLaozuListingAction(customId) {
+  const prefix = `${COMPONENT_IDS.LISTING_PREFIX}:`;
+  if (!String(customId || "").startsWith(prefix)) return null;
+  const [action, ownerId] = String(customId).slice(prefix.length).split(":");
+  if (!["confirm", "cancel"].includes(action) || !/^\d{6,24}$/.test(ownerId || "")) return null;
+  return { action, ownerId };
+}
 
 export async function handleButton(interaction, env, ctx) {
   const customId = String(interaction.data?.custom_id || "");
   if (isRosterInteraction(customId)) return handleRosterInteraction(interaction, env);
   if (isAdminInteraction(customId)) return handleAdminInteraction(interaction, env, ctx);
   if (isLaozuMemoryInteraction(customId)) return handleLaozuMemoryInteraction(interaction, env);
+  const listingAction = parseLaozuListingAction(customId);
+  if (listingAction) return handleLaozuListingAction(interaction, env, listingAction);
   if (customId === COMPONENT_IDS.DAILY_GREETING) {
     return handleDailyGreeting(interaction, env);
   }
@@ -41,6 +56,36 @@ export async function handleButton(interaction, env, ctx) {
   if (uidReview) return handleUidReview(interaction, env, uidReview);
 
   return immediateResponse("❌ 這個按鈕已失效，請聯絡宗主重新建立面板。", true);
+}
+
+async function handleLaozuListingAction(interaction, env, { action, ownerId }) {
+  const user = getUser(interaction);
+  if (String(user?.id || "") !== ownerId) {
+    return immediateResponse("❌ 只有這份專長草稿的本人可以操作按鈕。", true);
+  }
+  const member = await getMember(env, ownerId);
+  if (!member || !canUseAI(member.rank)) {
+    return immediateResponse("❌ 你目前不是可使用老祖的仙遊者正式成員。", true);
+  }
+  const guildId = String(interaction.guild_id || "dm");
+  const pending = await getMatchProfileDraft(env, guildId, ownerId);
+  if (!pending) {
+    return immediateResponse("這份專長草稿已處理或已逾期，沒有更新任何資料。", true);
+  }
+  if (action === "cancel") {
+    await discardMatchProfileDraft(env, guildId, ownerId);
+    return updateMessageResponse({ content: "✅ 已取消這次專長更新，現有公開刊登沒有變更。", components: [] });
+  }
+  const profile = await confirmMatchProfileDraft(env, { guildId, member });
+  return updateMessageResponse({
+    content: [
+      "✅ 已確認更新。舊刊登已由這筆新資料取代。",
+      `專長：${profile.skills}`,
+      `方便時間：${profile.availability}`,
+      profile.note ? `備註：${profile.note}` : "備註：無"
+    ].join("\n"),
+    components: []
+  });
 }
 
 async function handleUidReview(interaction, env, review) {
