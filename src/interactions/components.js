@@ -48,14 +48,28 @@ export function laozuMemoryDeleteConfirmComponents() {
   ] }];
 }
 
-export function capabilitySuggestionComponents(items) {
-  return (items || []).slice(0, 5).map(item => ({
+export function capabilitySuggestionComponents(items, selectedIndex = 0) {
+  const rows = (items || []).slice(0, 5);
+  if (!rows.length) return [{ type: 1, components: [{ type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:refresh`, label: "返回管理中心", emoji: { name: "↩️" } }] }];
+  const index = Math.max(0, Math.min(Number(selectedIndex) || 0, rows.length - 1));
+  const item = rows[index];
+  const version = item.version || "invalid";
+  const components = [{
     type: 1,
     components: [
-      { type: 2, style: 3, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability:developed:${item.id}`, label: "已開發", emoji: { name: "✅" } },
-      { type: 2, style: 4, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability:rejected:${item.id}`, label: "拒絕", emoji: { name: "🚫" } }
+      { type: 2, style: 3, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability:developed:${item.id}:${version}`, label: "此筆｜標記已開發", emoji: { name: "✅" } },
+      { type: 2, style: 4, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability:rejected:${item.id}:${version}`, label: "此筆｜拒絕", emoji: { name: "🚫" } }
     ]
-  }));
+  }];
+  if (rows.length > 1) components.push({
+    type: 1,
+    components: [
+      { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability-page:${rows[(index - 1 + rows.length) % rows.length].id}`, label: "上一筆", emoji: { name: "◀️" } },
+      { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:capability-page:${rows[(index + 1) % rows.length].id}`, label: "下一筆", emoji: { name: "▶️" } },
+      { type: 2, style: 2, custom_id: `${COMPONENT_IDS.ADMIN_PREFIX}:refresh`, label: "稍後處理", emoji: { name: "↩️" } }
+    ]
+  });
+  return components;
 }
 
 export function matchProfileAdminComponents(profiles) {
