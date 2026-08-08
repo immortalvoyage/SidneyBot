@@ -20,7 +20,7 @@ import {
   matchProfileManageComponents
 } from "./components.js";
 import { isMasterAdminChannel } from "../platform/channels.js";
-import { listCapabilitySuggestions, resolveCapabilitySuggestion } from "../platform/laozu-autonomy.js";
+import { capabilitySuggestionVersion, listCapabilitySuggestions, resolveCapabilitySuggestion } from "../platform/laozu-autonomy.js";
 import { getMatchProfile, listMatchProfiles, withdrawMatchProfile } from "../platform/laozu-matchmaking.js";
 import { commandPolicyList, resetCommandPolicy, selectCommandPolicy, updateCommandPolicy } from "./command-permissions.js";
 import { listLaozuMemoryPrivacyStats } from "../platform/laozu-shared-events.js";
@@ -101,9 +101,10 @@ export async function handleAdminInteraction(interaction, env, ctx) {
     if (key === "match-profile-select") return matchProfileDetailsResponse(interaction, env);
     if (key.startsWith("match-profile-remove:")) return removeMatchProfileResponse(interaction, env, key.slice("match-profile-remove:".length));
     if (key === "capabilities") return capabilityQueueResponse(env);
+    if (key.startsWith("capability-page:")) return capabilityQueueResponse(env, key.slice("capability-page:".length));
     if (key.startsWith("capability:")) {
-      const [, decision, id] = key.split(":");
-      return resolveCapabilityResponse(env, id, decision);
+      const [, decision, id, version] = key.split(":");
+      return resolveCapabilityResponse(env, id, decision, version);
     }
     if (key === "audit") return recentAudit(env);
     if (key === "refresh") return updateMessageResponse({ content: "## ☯ 仙遊者｜宗主管理中心\n面板已重新整理。所有操作都會驗證宗主身分並留下紀錄。", components: masterAdminPanelComponents() });
@@ -425,25 +426,34 @@ async function removeMatchProfileResponse(interaction, env, userId) {
   });
 }
 
-async function capabilityQueueData(env) {
+async function capabilityQueueData(env, selectedId = "") {
   const items = await listCapabilitySuggestions(env, 5);
+  const selectedIndex = Math.max(0, items.findIndex(item => item.id === selectedId));
+  const item = items[selectedIndex];
+  const versionedItems = items.map(row => ({ ...row, version: capabilitySuggestionVersion(row) }));
   return {
     content: [
       "## 🧠 老祖｜能力建議評估",
-      "老祖會把聊天中判斷為『目前平台可能欠缺的能力』列在這裡。語意相近的需求會自動合併；拒絕後會進入黑名單，不再重新加入相同或高度相似的需求。",
+      "一次只顯示並處理一筆，按鈕永遠對應下方這張卡片；可用上一筆／下一筆切換。拒絕後會加入黑名單。",
       "",
-      ...(items.length ? items.map((item, index) => `${index + 1}. **${item.text}**\n   出現 ${item.count || 1} 次｜最後：${item.lastSeenAt || "-"}`) : ["目前沒有待評估能力建議。"])
+      ...(item ? [
+        `### 第 ${selectedIndex + 1}／${items.length} 筆`,
+        `**${item.text}**`,
+        `出現 ${item.count || 1} 次｜最後：${item.lastSeenAt || "-"}`,
+        "",
+        "請只針對這一筆選擇下方操作。"
+      ] : ["目前沒有待評估能力建議。"])
     ].join("\n"),
-    components: capabilitySuggestionComponents(items)
+    components: capabilitySuggestionComponents(versionedItems, selectedIndex)
   };
 }
 
-async function capabilityQueueResponse(env) {
-  return updateMessageResponse(await capabilityQueueData(env));
+async function capabilityQueueResponse(env, selectedId = "") {
+  return updateMessageResponse(await capabilityQueueData(env, selectedId));
 }
 
-async function resolveCapabilityResponse(env, id, decision) {
-  const resolved = await resolveCapabilitySuggestion(env, id, decision);
+async function resolveCapabilityResponse(env, id, decision, version) {
+  const resolved = await resolveCapabilitySuggestion(env, id, decision, version);
   const data = await capabilityQueueData(env);
   const label = decision === "developed" ? "已標記為已開發" : "已拒絕並加入黑名單";
   return updateMessageResponse({
