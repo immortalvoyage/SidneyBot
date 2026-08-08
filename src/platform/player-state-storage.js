@@ -2,6 +2,7 @@ import {
   createDefaultPlayerState,
   normalizePlayerState
 } from "./player-state.js";
+import { syncLaozuDataCenter } from "./laozu-data-center.js";
 import { kvGet, kvPut } from "../sect/storage.js";
 
 const PLAYER_STATE_PREFIX = "platform:player-state:";
@@ -32,10 +33,36 @@ export function formatPlayerStateSummary(input) {
   ].join("\n");
 }
 
+async function syncPlayerStateToDataCenter(env, state, rank = "") {
+  try {
+    await syncLaozuDataCenter(env, "sync_member_relation", {
+      source: "player_state",
+      member: {
+        userId: state.userId,
+        displayName: state.identity?.displayName || "",
+        rank,
+        favor: state.relationship?.favor,
+        trust: state.relationship?.trust,
+        grudge: state.relationship?.grudge,
+        patienceToday: state.relationship?.patienceToday,
+        interactionTier: state.relationship?.interactionTier || "",
+        currentStreak: state.greeting?.currentStreak,
+        totalDays: state.greeting?.totalDays,
+        longestStreak: state.greeting?.longestStreak,
+        lastDate: state.greeting?.lastDate || "",
+        lastReason: state.relationship?.lastReason || ""
+      }
+    });
+  } catch (error) {
+    console.error("成員關係值同步 Google Sheets 失敗", error);
+  }
+}
+
 export async function savePlayerState(env, state) {
   const normalized = normalizePlayerState(state);
   if (!normalized.userId) throw new Error("playerState userId 不可為空");
   await kvPut(env, playerStateKey(normalized.userId), normalized);
+  await syncPlayerStateToDataCenter(env, normalized);
   return normalized;
 }
 
@@ -48,6 +75,7 @@ export async function ensurePlayerState(env, member) {
   const displayName = String(
     member.displayName || member.username || "未知仙友"
   ).trim();
+  const rank = String(member.rank || "");
 
   if (stored) {
     const current = normalizePlayerState(stored);
@@ -61,6 +89,7 @@ export async function ensurePlayerState(env, member) {
       }
     });
     await kvPut(env, key, updated);
+    await syncPlayerStateToDataCenter(env, updated, rank);
     return updated;
   }
 
@@ -71,5 +100,6 @@ export async function ensurePlayerState(env, member) {
   if (member.joinedAt) created.createdAt = member.joinedAt;
   created.updatedAt = created.createdAt;
   await kvPut(env, key, created);
+  await syncPlayerStateToDataCenter(env, created, rank);
   return created;
 }
