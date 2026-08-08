@@ -76,6 +76,22 @@ async function handleMessage(message) {
   try {
     const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "X-Sidney-Timestamp": timestamp, "X-Sidney-Event-Id": eventId, "X-Sidney-Signature": signature }, body, signal: AbortSignal.timeout(55000) });
     const result = await response.json();
+    const crossPost = result?.crossPost;
+    const targetChannelId = String(crossPost?.channelId || "").trim();
+    const crossPostContent = String(crossPost?.content || "").trim();
+
+    if (/^\d{6,24}$/.test(targetChannelId) && crossPostContent) {
+      try {
+        await sendDiscord(targetChannelId, crossPostContent);
+        await sendDiscord(message.channel_id, `✅ 已將訊息發布至 <#${targetChannelId}>。`, message.id);
+      } catch (error) {
+        lastError = String(error?.message || error).slice(0, 300);
+        console.error("跨頻道公告發送失敗", error);
+        await sendDiscord(message.channel_id, `❌ 本座未能把訊息送到 <#${targetChannelId}>，請確認老祖在該頻道具有查看與發送訊息權限。`, message.id).catch(() => {});
+      }
+      return;
+    }
+
     await sendDiscord(message.channel_id, result.reply || "老祖剛才走神了，再喚我一次可好？", message.id, result.components);
   } catch (error) {
     lastError = String(error?.message || error).slice(0, 300);
