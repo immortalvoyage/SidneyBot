@@ -127,7 +127,13 @@ export async function listCapabilitySuggestions(env, limit = 5) {
   return merged.slice(0, Math.max(1, Math.min(Number(limit) || 5, 5)));
 }
 
-export async function resolveCapabilitySuggestion(env, id, decision) {
+export function capabilitySuggestionVersion(item) {
+  const count = Math.max(1, Number(item?.count || 1)).toString(36);
+  const seen = Date.parse(String(item?.lastSeenAt || ""));
+  return `${count}-${Number.isFinite(seen) ? seen.toString(36) : "0"}`;
+}
+
+export async function resolveCapabilitySuggestion(env, id, decision, expectedVersion = "") {
   if (!env?.BOT_MEMORY) throw new Error("老祖能力建議資料庫尚未設定");
   const normalizedId = clean(id, 32);
   if (!/^[a-z0-9]+$/u.test(normalizedId)) throw new Error("能力建議識別碼無效");
@@ -135,6 +141,9 @@ export async function resolveCapabilitySuggestion(env, id, decision) {
   const key = `${SUGGESTION_PREFIX}${normalizedId}`;
   const item = await env.BOT_MEMORY.get(key, { type: "json" });
   if (!item) throw new Error("找不到這筆能力建議，可能已被處理");
+  if (!expectedVersion || capabilitySuggestionVersion(item) !== clean(expectedVersion, 40)) {
+    throw new Error("這筆能力建議已更新或面板版本過舊，請重新開啟能力建議面板");
+  }
   item.status = decision;
   item.resolvedAt = new Date().toISOString();
   await env.BOT_MEMORY.put(key, JSON.stringify(item));

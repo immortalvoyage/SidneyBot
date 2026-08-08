@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  capabilitySuggestionVersion,
   detectLaozuConversationIntent,
   listCapabilitySuggestions,
   recordCapabilitySuggestion,
@@ -67,7 +68,7 @@ test("能力建議可由宗主標記拒絕且相似需求不再重複加入", as
   assert.ok(first?.id);
   assert.equal((await listCapabilitySuggestions(storage)).length, 1);
 
-  await resolveCapabilitySuggestion(storage, first.id, "rejected");
+  await resolveCapabilitySuggestion(storage, first.id, "rejected", capabilitySuggestionVersion(first));
   assert.equal((await listCapabilitySuggestions(storage)).length, 0);
 
   const repeated = await recordCapabilitySuggestion(storage, {
@@ -76,4 +77,26 @@ test("能力建議可由宗主標記拒絕且相似需求不再重複加入", as
     guildId: "456"
   });
   assert.equal(repeated, null);
+});
+
+test("舊能力建議按鈕或資料更新後的按鈕不得處理錯誤版本", async () => {
+  const storage = env();
+  const first = await recordCapabilitySuggestion(storage, {
+    text: "老祖能不能幫忙管理活動報名？",
+    userId: "123",
+    guildId: "456"
+  });
+  await assert.rejects(
+    resolveCapabilitySuggestion(storage, first.id, "developed", ""),
+    /面板版本過舊/
+  );
+  await recordCapabilitySuggestion(storage, {
+    text: "妳可以幫我們管理活動報名嗎？",
+    userId: "789",
+    guildId: "456"
+  });
+  await assert.rejects(
+    resolveCapabilitySuggestion(storage, first.id, "developed", capabilitySuggestionVersion(first)),
+    /已更新/
+  );
 });
