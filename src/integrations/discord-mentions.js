@@ -85,15 +85,36 @@ export function directRosterReply(question, members = [], mentionedUserIds = [])
     ].join("\n");
   }
 
-  if (mentionedUserIds.length === 1 && /(是誰|哪位|認識|知道|身分|身份)/u.test(text)) {
-    const userId = String(mentionedUserIds[0]);
-    const target = active.find(item => String(item.userId) === userId);
-    if (!target) return "本座已查過目前的正式名冊，查無這位玩家；其身分現在無法確認。";
-    const name = String(target.displayName || target.username || "未記名仙友").trim();
-    return `這位是 **${name}**，目前身分為 **${RANK_NAMES[target.rank] || "正式成員"}**。`;
-  }
-
   return null;
+}
+
+export async function formatMentionedMemberContext(env, guildId, members = [], mentionedUserIds = []) {
+  if (!mentionedUserIds.length) return "";
+  const active = members.filter(item => item && item.active !== false);
+  const rows = await Promise.all(mentionedUserIds.slice(0, 10).map(async rawUserId => {
+    const userId = String(rawUserId);
+    const target = active.find(item => String(item.userId) === userId);
+    if (!target) return `- Discord ID ${userId}｜正式名冊查無此人；不得猜測其身分或經歷。`;
+    const profile = guildId === "dm" ? null : await getMatchProfile(env, guildId, userId);
+    const facts = [
+      `名稱 ${String(target.displayName || target.username || "未記名仙友").trim()}`,
+      `身分 ${RANK_NAMES[target.rank] || target.rank || "正式成員"}`,
+      target.joinedAt ? `加入時間 ${target.joinedAt}` : ""
+    ];
+    if (profile?.consent) {
+      facts.push(`本人同意公開的專長 ${profile.skills || (profile.skillList || []).join("、") || "未填寫"}`);
+      if (profile.availability) facts.push(`方便時間 ${profile.availability}`);
+      if (profile.note) facts.push(`公開備註 ${profile.note}`);
+    }
+    return `- Discord ID ${userId}｜${facts.filter(Boolean).join("｜")}`;
+  }));
+  return [
+    "【本次被提及成員的可公開介紹資料】",
+    ...rows,
+    "玩家是在請你介紹真人。先自然回答是否認識，再用 2 至 4 句介紹現有公開事實；不要只把名稱與身分重念一遍。",
+    "資料不足時，溫和說明目前只知道哪些資料，並邀請對方本人日後補充公開專長；不得編故事、推測個性、洩漏私人記憶，也不得叫提問者自己去問或責怪他問得太多。",
+    "連續詢問不同成員時，應承接玩家想要更完整介紹的偏好，變化句型，不得輸出相同模板。"
+  ].join("\n");
 }
 
 export function extractMentionQuestion(content, botUserId) {
@@ -396,7 +417,12 @@ export async function handleDiscordMentionEvent(request, env) {
   const mentionedUserIds = extractMentionedUserIds(payload.content, botUserId).filter(id => id !== userId);
   const needsRoster = needsSectRosterContext(question, mentionedUserIds);
   const rosterMembers = needsRoster ? await listMembers(env) : [];
-  const sectContext = needsRoster ? formatSectRosterContext(rosterMembers) : "";
+  const mentionedMemberContext = needsRoster
+    ? await formatMentionedMemberContext(env, guildId, rosterMembers, mentionedUserIds)
+    : "";
+  const sectContext = needsRoster
+    ? [formatSectRosterContext(rosterMembers), mentionedMemberContext].filter(Boolean).join("\n\n")
+    : "";
   let sharedEvents = await loadSharedLaozuEvents(env, {
     guildId,
     userIds: [userId, ...mentionedUserIds],

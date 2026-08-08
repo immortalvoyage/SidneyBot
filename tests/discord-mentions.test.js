@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   directRosterReply,
   extractMentionQuestion,
+  formatMentionedMemberContext,
   formatSectRosterContext,
   handleDiscordMentionEvent,
   needsSectRosterContext,
@@ -43,13 +44,31 @@ test("名冊問題直接輸出分組名稱且不暴露 Discord ID", () => {
   assert.doesNotMatch(reply, /111|222|333|已離開|<@/);
 });
 
-test("指定玩家身分只依正式名冊精確回答", () => {
+test("指定玩家介紹不再被固定名稱身分模板攔截", () => {
   const members = [{ userId: "222", displayName: "沈慕白", rank: "disciple", active: true }];
-  assert.equal(
-    directRosterReply("<@222> 是誰？", members, ["222"]),
-    "這位是 **沈慕白**，目前身分為 **門徒**。"
-  );
-  assert.match(directRosterReply("<@999> 是誰？", members, ["999"]), /查無這位玩家/);
+  assert.equal(directRosterReply("<@222> 是誰？", members, ["222"]), null);
+  assert.equal(directRosterReply("<@999> 是誰？", members, ["999"]), null);
+});
+
+test("人物介紹上下文只提供正式名冊與本人同意公開資料", async () => {
+  const values = new Map([
+    ["laozu:match:v1:guild:222", JSON.stringify({
+      userId: "222", consent: true, skills: "副本帶隊、裝備搭配", availability: "平日晚間", note: "可協助新人"
+    })]
+  ]);
+  const context = await formatMentionedMemberContext({
+    BOT_MEMORY: { async get(key, options) {
+      const value = values.get(key);
+      return options?.type === "json" && value ? JSON.parse(value) : value || null;
+    } }
+  }, "guild", [
+    { userId: "222", displayName: "沈慕白", rank: "elder", active: true }
+  ], ["222", "999"]);
+  assert.match(context, /名稱 沈慕白｜身分 長老/);
+  assert.match(context, /本人同意公開的專長 副本帶隊、裝備搭配/);
+  assert.match(context, /正式名冊查無此人/);
+  assert.match(context, /不要只把名稱與身分重念一遍/);
+  assert.match(context, /不得編故事/);
 });
 
 test("mention endpoint rejects unsigned events", async () => {
