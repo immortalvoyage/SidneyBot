@@ -1,4 +1,5 @@
 import { kvGet, kvPut } from "../sect/storage.js";
+import { syncLaozuDataCenter } from "./laozu-data-center.js";
 
 const STATE_KEY = "platform:laozu:mood-state:v1";
 const SIGNAL_PREFIX = "platform:laozu:signal:";
@@ -105,6 +106,15 @@ export async function recordLaozuSignal(env, { type, actorId = "system", eventId
     kvPut(env, STATE_KEY, next),
     kvPut(env, dedupeKey, { type, actorId: safeActor, receivedAt: now.toISOString() }, { expirationTtl: DAY_SECONDS * 35 })
   ]);
+  try {
+    await syncLaozuDataCenter(env, "sync_mood", {
+      source: "laozu_mood_state",
+      version: "4.3.22",
+      mood: publicLaozuMoodState(next, now),
+      note: type
+    });
+  } catch (error) {
+    console.error("老祖心情同步 Google Sheets 失敗", error);
+  }
   return { applied: true, state: next };
 }
-
