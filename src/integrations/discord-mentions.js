@@ -443,8 +443,12 @@ export async function handleDiscordMentionEvent(request, env) {
   ]);
 
   const mentionedUserIds = extractMentionedUserIds(payload.content, botUserId).filter(id => id !== userId);
-  const needsRoster = needsSectRosterContext(question, mentionedUserIds);
-  const rosterMembers = needsRoster ? await listMembers(env) : [];
+  const rosterMembers = guildId === "dm" ? [] : await listMembers(env);
+  const namedUserIds = guildId === "dm"
+    ? []
+    : resolveNamedMemberIds(question, rosterMembers, [userId, ...mentionedUserIds]);
+  const participantUserIds = [...new Set([...mentionedUserIds, ...namedUserIds])];
+  const needsRoster = needsSectRosterContext(question, participantUserIds);
   const mentionedMemberContext = needsRoster
     ? await formatMentionedMemberContext(env, guildId, rosterMembers, participantUserIds)
     : "";
