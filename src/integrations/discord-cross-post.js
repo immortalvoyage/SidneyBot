@@ -6,7 +6,7 @@ export function extractCrossPostChannelId(content, currentChannelId = "") {
 }
 
 export function attachMasterCrossPost(result, { targetChannelId, memberRank } = {}) {
-  if (!result || result.ok !== true || memberRank !== "master") return result;
+  if (!result || result.ok !== true || !["master", "elder"].includes(memberRank)) return result;
   const channelId = String(targetChannelId || "").trim();
   const content = String(result.reply || "").trim();
   if (!/^\d{6,24}$/.test(channelId) || !content) return result;
