@@ -1,4 +1,4 @@
-import { askGemini } from "../../gemini.js";
+﻿import { askGemini } from "../../gemini.js";
 import { loadMemory, loadProfile, saveMemory } from "../../memory.js";
 import { getMember, listMembers } from "../sect/members.js";
 import { canUseAI } from "../sect/permissions.js";
@@ -115,6 +115,34 @@ export async function formatMentionedMemberContext(env, guildId, members = [], m
     "資料不足時，溫和說明目前只知道哪些資料，並邀請對方本人日後補充公開專長；不得編故事、推測個性、洩漏私人記憶，也不得叫提問者自己去問或責怪他問得太多。",
     "連續詢問不同成員時，應承接玩家想要更完整介紹的偏好，變化句型，不得輸出相同模板。"
   ].join("\n");
+}
+
+export function resolveNamedMemberIds(question, members = [], excludedUserIds = []) {
+  const text = String(question || "");
+  if (!text) return [];
+
+  const excluded = new Set(excludedUserIds.map(id => String(id)));
+  const matched = [];
+
+  for (const member of members) {
+    if (!member || member.active === false) continue;
+
+    const userId = String(member.userId || "").trim();
+    if (!userId || excluded.has(userId)) continue;
+
+    const names = [
+      member.displayName,
+      member.username
+    ]
+      .map(value => String(value || "").trim())
+      .filter(name => name.length >= 2);
+
+    if (names.some(name => text.includes(name))) {
+      matched.push(userId);
+    }
+  }
+
+  return [...new Set(matched)].slice(0, 10);
 }
 
 export function extractMentionQuestion(content, botUserId) {
@@ -418,14 +446,14 @@ export async function handleDiscordMentionEvent(request, env) {
   const needsRoster = needsSectRosterContext(question, mentionedUserIds);
   const rosterMembers = needsRoster ? await listMembers(env) : [];
   const mentionedMemberContext = needsRoster
-    ? await formatMentionedMemberContext(env, guildId, rosterMembers, mentionedUserIds)
+    ? await formatMentionedMemberContext(env, guildId, rosterMembers, participantUserIds)
     : "";
   const sectContext = needsRoster
     ? [formatSectRosterContext(rosterMembers), mentionedMemberContext].filter(Boolean).join("\n\n")
     : "";
   let sharedEvents = await loadSharedLaozuEvents(env, {
     guildId,
-    userIds: [userId, ...mentionedUserIds],
+    userIds: [userId, ...participantUserIds],
     excludeEventId: eventId
   });
 
@@ -434,7 +462,7 @@ export async function handleDiscordMentionEvent(request, env) {
       sharedEvents = await queryArchivedLaozuEvents(env, {
         guildId,
         requesterId: userId,
-        userIds: [userId, ...mentionedUserIds]
+        userIds: [userId, ...participantUserIds]
       });
     } catch (error) {
       console.error("老祖事件歷史查詢失敗", error);
@@ -445,13 +473,13 @@ export async function handleDiscordMentionEvent(request, env) {
     guildId,
     channelId,
     actorId: userId,
-    participantIds: mentionedUserIds,
+    participantIds: participantUserIds,
     eventId,
     text: question,
     scope: guildId === "dm" ? "private" : "public"
   });
 
-  const rosterReply = directRosterReply(question, rosterMembers, mentionedUserIds);
+  const rosterReply = directRosterReply(question, rosterMembers, participantUserIds);
   if (rosterReply) {
     await finishChat(env, { guildId, userId, question, answer: rosterReply, eventId });
     return json({ ok: true, reply: rosterReply });
