@@ -2,7 +2,7 @@ const LAOZU_DATA_CENTER_MEMBER_SHEET = "成員關係值";
 const LAOZU_DATA_CENTER_MOOD_SHEET = "老祖心情狀態";
 const LAOZU_DATA_CENTER_STATUS_SHEET = "系統同步狀態";
 
-const LAOZU_DATA_CENTER_MEMBER_HEADERS = ["玩家ID", "顯示名稱", "身分", "熟悉度", "信任度", "好感度", "關心度", "警戒度", "最近互動時間", "互動次數", "正向事件數", "負向事件數", "最後事件ID", "最後更新", "資料來源", "備註"];
+const LAOZU_DATA_CENTER_MEMBER_HEADERS = ["玩家ID", "顯示名稱", "身分", "好感度", "信任度", "芥蒂值", "今日耐心", "互動層級", "連續請安", "累計請安", "最長連續", "上次請安", "最後原因", "最後更新", "資料來源", "備註"];
 const LAOZU_DATA_CENTER_MOOD_HEADERS = ["時間", "綜合心情", "語氣", "愉悅", "安全感", "疲勞", "信任", "社群壓力", "互動次數", "訊號次數", "最後訊號時間", "資料來源", "版本", "備註"];
 const LAOZU_DATA_CENTER_STATUS_HEADERS = ["模組", "狀態", "最後同步時間", "最後成功時間", "最後錯誤", "版本", "資料來源", "備註"];
 
@@ -12,25 +12,24 @@ function syncLaozuMemberRelation_(payload) {
   if (!/^\d{6,24}$/.test(userId)) throw new Error("成員關係缺少有效玩家ID");
   const sheet = ensureLaozuDataCenterSheet_(LAOZU_DATA_CENTER_MEMBER_SHEET, LAOZU_DATA_CENTER_MEMBER_HEADERS);
   const row = findLaozuDataCenterRow_(sheet, 1, userId);
-  const values = [[
+  sheet.getRange(row, 1, 1, LAOZU_DATA_CENTER_MEMBER_HEADERS.length).setValues([[
     userId,
     String(member.displayName || ""),
     String(member.rank || ""),
-    numberOrBlank_(member.familiarity),
+    numberOrBlank_(member.favor),
     numberOrBlank_(member.trust),
-    numberOrBlank_(member.affinity),
-    numberOrBlank_(member.care),
-    numberOrBlank_(member.alertness),
-    String(member.lastInteractionAt || ""),
-    numberOrZero_(member.interactionCount),
-    numberOrZero_(member.positiveEventCount),
-    numberOrZero_(member.negativeEventCount),
-    String(member.lastEventId || ""),
+    numberOrBlank_(member.grudge),
+    numberOrBlank_(member.patienceToday),
+    String(member.interactionTier || ""),
+    numberOrZero_(member.currentStreak),
+    numberOrZero_(member.totalDays),
+    numberOrZero_(member.longestStreak),
+    String(member.lastDate || ""),
+    String(member.lastReason || ""),
     new Date(),
     String(payload.source || "worker"),
     String(member.note || "")
-  ]];
-  sheet.getRange(row, 1, 1, LAOZU_DATA_CENTER_MEMBER_HEADERS.length).setValues(values);
+  ]]);
   return { row: row };
 }
 
