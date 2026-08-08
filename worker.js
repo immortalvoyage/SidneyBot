@@ -10,8 +10,10 @@ import { handleButton } from "./src/interactions/buttons.js";
 import { handleAdminInteraction, isAdminInteraction } from "./src/interactions/admin-panel.js";
 import { handleLaozuStateRequest } from "./src/integrations/laozu-state.js";
 import { handleDiscordMentionEvent } from "./src/integrations/discord-mentions.js";
+import { attachMasterCrossPost, extractCrossPostChannelId } from "./src/integrations/discord-cross-post.js";
 import { handleHealthRequest } from "./src/integrations/health.js";
 import { handleHelpInteraction, isHelpInteraction } from "./src/interactions/help-panel.js";
+import { getMember } from "./src/sect/members.js";
 
 const PING = 1;
 const APPLICATION_COMMAND = 2;
@@ -33,7 +35,23 @@ export default {
       return handleLaozuStateRequest(request, env);
     }
     if (url.pathname === "/integrations/discord-mentions") {
-      return handleDiscordMentionEvent(request, env);
+      const payload = await request.clone().json().catch(() => null);
+      const response = await handleDiscordMentionEvent(request, env);
+      if (!response.ok || !payload) return response;
+
+      const targetChannelId = extractCrossPostChannelId(payload.content, payload.channelId);
+      if (!targetChannelId) return response;
+
+      const [result, member] = await Promise.all([
+        response.clone().json().catch(() => null),
+        getMember(env, String(payload.userId || ""))
+      ]);
+      const enriched = attachMasterCrossPost(result, {
+        targetChannelId,
+        memberRank: member?.rank
+      });
+      if (enriched === result) return response;
+      return json(enriched, response.status);
     }
 
     const apiResponse = await handlePlatformApi(request, env, url);
