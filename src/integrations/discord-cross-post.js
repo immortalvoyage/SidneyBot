@@ -2,7 +2,7 @@ export function extractCrossPostChannelId(content, currentChannelId = "") {
   const text = String(content || "");
   if (!/(發到|傳到|貼到|送到|發至|傳至|貼至|送至|發布到|發布至|公告到|公告至|通知到|通知至|訊息要發到|消息要發到)/u.test(text)) return "";
   const matches = [...text.matchAll(/<#(\d{6,24})>/g)].map(match => match[1]);
-  return matches.find(channelId => channelId !== String(currentChannelId || "")) || "";
+  return matches[0] || "";
 }
 
 export function attachMasterCrossPost(result, { targetChannelId, memberRank } = {}) {
