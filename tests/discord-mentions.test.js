@@ -1,4 +1,4 @@
-import test from "node:test";
+﻿import test from "node:test";
 import assert from "node:assert/strict";
 import {
   directRosterReply,
@@ -7,7 +7,8 @@ import {
   formatSectRosterContext,
   handleDiscordMentionEvent,
   needsSectRosterContext,
-  processMatchListingChat
+  processMatchListingChat,
+  resolveNamedMemberIds
 } from "../src/integrations/discord-mentions.js";
 import { parseMatchProfileDraft } from "../src/platform/laozu-matchmaking.js";
 
@@ -108,4 +109,40 @@ test("討論專長更新 BUG 不會建立專長草稿", () => {
     "剛才那句話被你塞進專長更新",
     "請修正專長更新的 BUG"
   ]) assert.equal(parseMatchProfileDraft(text), null, text);
+});
+
+test("可由正式名冊名稱辨識多人共同話題參與者", () => {
+  const members = [
+    { userId: "111", displayName: "凜冬皓月", username: "winter", active: true },
+    { userId: "222", displayName: "沈慕白", username: "mubai", active: true },
+    { userId: "333", displayName: "梁淨", username: "liangjing", active: true }
+  ];
+
+  assert.deepEqual(
+    resolveNamedMemberIds("我有看到沈慕白經常偷偷跑出門", members, ["333"]),
+    ["222"]
+  );
+
+  assert.deepEqual(
+    resolveNamedMemberIds("凜冬皓月跟沈慕白剛才都在說這件事", members, ["333"]),
+    ["111", "222"]
+  );
+});
+
+test("名稱解析排除目前說話者、既有 mention 與非正式成員", () => {
+  const members = [
+    { userId: "111", displayName: "凜冬皓月", active: true },
+    { userId: "222", displayName: "沈慕白", active: true },
+    { userId: "333", displayName: "梁淨", active: true },
+    { userId: "444", displayName: "已離宗玩家", active: false }
+  ];
+
+  assert.deepEqual(
+    resolveNamedMemberIds(
+      "梁淨說沈慕白跟已離宗玩家都看到了",
+      members,
+      ["333", "222"]
+    ),
+    []
+  );
 });
